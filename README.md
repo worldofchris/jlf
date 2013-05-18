@@ -1,4 +1,4 @@
-# JIRA stats
+# JIRA _lean forward_
 
 Extract stats from JIRA so we can measure:
 
