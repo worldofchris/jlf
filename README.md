@@ -1,4 +1,6 @@
-jlf
-===
+# JIRA stats
 
-Jira Lean Forward
+Extract stats from JIRA so we can measure:
+
+* Throughput
+* Cycle Time
