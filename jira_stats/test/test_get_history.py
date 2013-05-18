@@ -4,7 +4,7 @@ from jira_stats.jira_wrapper import get_cycle_time
 import unittest
 
 START_STATE = 'In Progress'
-END_STATE = 'Closed'
+END_STATE = 'Customer Approval'
 REOPENED_STATE = 'Reopened'
 
 

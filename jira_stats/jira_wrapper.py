@@ -225,7 +225,7 @@ class JiraIssues(object):
                                  'project':    f.project.name,
                                  'type':       f.issuetype.name,
                                  'components': [],
-                                 'count':   1}
+                                 'count':      1}
 
                     for component in f.components:
                         issue_row['components'].append(component.name)
