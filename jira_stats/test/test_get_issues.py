@@ -99,26 +99,26 @@ class TestGetMetrics(unittest.TestCase):
         Excel
         """
 
-        expected = {'Ops Tools': pd.Series([np.float64(1),
-                                            np.float64(1),
-                                            np.float64(1),
-                                            np.float64(1),
-                                            np.float64(2),
-                                            np.float64(3)],
+        expected = {'Ops Tools': pd.Series([np.int64(1),
+                                            np.int64(1),
+                                            np.int64(1),
+                                            np.int64(1),
+                                            np.int64(2),
+                                            np.int64(3)],
                                             index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']),
-                    'Portal':    pd.Series([np.float64(1),
-                                            np.float64(1),
-                                            np.float64(1),
-                                            np.float64(1),
-                                            np.float64(2),
-                                            np.float64(3)],
+                    'Portal':    pd.Series([np.int64(1),
+                                            np.int64(1),
+                                            np.int64(1),
+                                            np.int64(1),
+                                            np.int64(2),
+                                            np.int64(3)],
                                             index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']),
-                    'Reports':   pd.Series([np.float64(1),
-                                            np.float64(1),
-                                            np.float64(1),
-                                            np.float64(1),
-                                            np.float64(2),
-                                            np.float64(3)],
+                    'Reports':   pd.Series([np.int64(1),
+                                            np.int64(1),
+                                            np.int64(1),
+                                            np.int64(1),
+                                            np.int64(2),
+                                            np.int64(3)],
                                             index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
 
         import jira.client
@@ -146,7 +146,7 @@ class TestGetMetrics(unittest.TestCase):
                                        to_date=date(2012, 12, 31))
 
 
-        assert_frame_equal(actual_frame, expected_frame), actual_frame
+        assert_frame_equal(actual_frame.astype(np.int64), expected_frame), actual_frame
 
     def testFillInTheBlanks(self):
         """
@@ -154,9 +154,9 @@ class TestGetMetrics(unittest.TestCase):
         This is going to make the graph inconsistent so we re-index to add in the missing weeks.
         """
 
-        expected = {'Ops Tools': pd.Series([np.float64(1), np.float64(2), np.float64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12']),
-                    'Portal':    pd.Series([np.float64(1), np.float64(2), np.float64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12']),
-                    'Reports':   pd.Series([np.float64(1), np.float64(2), np.float64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12'])}
+        expected = {'Ops Tools': pd.Series([np.int64(1), np.int64(2), np.int64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12']),
+                    'Portal':    pd.Series([np.int64(1), np.int64(2), np.int64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12']),
+                    'Reports':   pd.Series([np.int64(1), np.int64(2), np.int64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12'])}
 
         expected_frame = pd.DataFrame(expected)
         actual_index = fill_in_blanks(expected_frame.index)
