@@ -1,25 +1,15 @@
 {
     "server": "https://worldofchris.atlassian.net",
-    "username": "mrfoo",
+    "username": "readonly",
     "password": "WTFFTW!",
     "cycles": {
         "develop": {
-            "start":  "In Progress",
-            "end":    "Customer Approval",
-            "ignore": "Reopened" 
-        },
-        "approve": {
-            "start":  "In Progress",
+            "start":  "Open",
             "end":    "Closed",
-            "ignore": "Reopened"
+            "ignore": "Reopened" 
         }
     },
     "categories": {
-        "New Allocations": "(component = Allocations and project = 'Big Data')",
-        "Portal": "((project = 'Portal') or (labels = WULU and project = 'BIGDATA'))",
-        "Ops Tools": "(project = 'Ops Tools' or labels = 'OpsTools')",
-        "Players": "(project in (FBP, SAM) or labels = 'ministry')",
-        "Data": "(project in (Trinity, 'Big Data', 'Report'))",
-        "Infrastructure": "(project = Infrastructure)"
+        "All": "(project = 'JLF')"
     }
 } 
