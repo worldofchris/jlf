@@ -11,6 +11,7 @@ setup(
     packages = ['jira_stats'],
     include_package_data = True,
     install_requires=[
+        'python-dateutil==1.5',
         'numpy',
         'pandas',
         'requests',
