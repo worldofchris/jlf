@@ -108,7 +108,11 @@ def get_time_in_states(histories, from_date, until_date):
     time_in_states = []
 
     current_state = None
-    prev_state_change_date = from_date.date()
+
+    if hasattr(from_date, 'date'):
+        prev_state_change_date = from_date.date()
+    else:
+        prev_state_change_date = from_date
 
     for history in histories:
         for item in history.items:
