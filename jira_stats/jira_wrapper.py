@@ -108,7 +108,7 @@ def get_time_in_states(histories, from_date, until_date):
     time_in_states = []
 
     current_state = None
-    prev_state_change_date = from_date
+    prev_state_change_date = from_date.date()
 
     for history in histories:
         for item in history.items:
@@ -147,9 +147,10 @@ class JiraIssues(object):
         self.cycles = cycles
         self.types = types
 
-        self.jira_issues = None
+        self.done_issues = None
+        self.ongoing_issues = None
 
-    def get_issues_from_jira(self, jira, filter, filter_by_category=None):
+    def get_issues_from_jira(self, jira, filter=None, filter_by_category=None):
         """
         Get the actual issues out of jira
         """
@@ -166,7 +167,10 @@ class JiraIssues(object):
 
             n = 0
             while 1:
-                jql = self.categories[category] + filter
+
+                jql = self.categories[category]
+                if filter is not None:
+                    jql = jql + filter
 
                 issue_batch = jira.search_issues(jql,
                                                  startAt=n,
@@ -203,15 +207,30 @@ class JiraIssues(object):
 
         return issues
 
-    @property
-    def issues(self):
+    def issues_as_rows(self, issues):
+
         issue_rows = []
 
-        for issue in self.jira_issues:
+        for issue in issues:
             f = issue.fields
 
             resolution_date_str = f.resolutiondate
-            resolution_date = datetime.strptime(resolution_date_str[:10], '%Y-%m-%d')
+
+            if resolution_date_str is not None:
+                resolution_date = datetime.strptime(resolution_date_str[:10], '%Y-%m-%d')
+
+                week = week_start_date(resolution_date.isocalendar()[0],
+                                       resolution_date.isocalendar()[1]).strftime('%Y-%m-%d')
+
+            else:
+
+                week = None
+
+            time_in_states = get_time_in_states(issue.changelog.histories, 
+                                                datetime.strptime(f.created[:10], '%Y-%m-%d'),
+                                                date.today())
+
+            since = time_in_states[-1]['days']
 
             issue_row = {'swimlane':   issue.category,
                          'id':         issue.key,
@@ -219,8 +238,8 @@ class JiraIssues(object):
                          'project':    f.project.name,
                          'type':       f.issuetype.name,
                          'components': [],
-                         'week':       week_start_date(resolution_date.isocalendar()[0],
-                                       resolution_date.isocalendar()[1]).strftime('%Y-%m-%d')}
+                         'week':       week,
+                         'since':      since}
 
             for cycle in self.cycles:
                 issue_row[cycle] = getattr(issue, cycle)
@@ -230,8 +249,30 @@ class JiraIssues(object):
 
             issue_rows.append(issue_row)
 
-        df = pd.DataFrame(issue_rows)
+        return issue_rows
 
+    @property
+    def ongoing(self):
+        """
+        All issues that are still in flight
+        """
+        if self.ongoing_issues is None:
+            self.ongoing_issues = self.get_issues_from_jira(self.jira)
+
+        issue_rows = self.issues_as_rows(self.ongoing_issues)
+        df = pd.DataFrame(issue_rows)
+        return df
+
+    @property
+    def done(self):
+        """
+        All issues that have been completed
+        """
+        if self.done_issues is None:
+            assert False, "Need to go and get these..."
+
+        issue_rows = self.issues_as_rows(self.done_issues)
+        df = pd.DataFrame(issue_rows)
         return df
 
     def throughput(self,
@@ -244,19 +285,19 @@ class JiraIssues(object):
         Return the throughput for our issues
         """
 
-        if self.jira_issues is None:
+        if self.done_issues is None:
 
             """
-            We want to exclude subtasks and anything that was not resolved as fixed 
+            We want to exclude subtasks and anything that was not resolved as fixed
             """
             counts_towards_throughput = ' AND issuetype in standardIssueTypes() AND resolution = Fixed AND status in (Resolved, Closed)'
-            self.jira_issues = self.get_issues_from_jira(self.jira, 
-                                                         counts_towards_throughput, 
+            self.done_issues = self.get_issues_from_jira(self.jira,
+                                                         counts_towards_throughput,
                                                          category)
 
         issue_rows = []
 
-        for issue in self.jira_issues:
+        for issue in self.done_issues:
             f = issue.fields
 
             resolution_date_str = f.resolutiondate
@@ -291,21 +332,28 @@ class JiraIssues(object):
 
         df = pd.DataFrame(issue_rows)
 
-        table = pd.tools.pivot.pivot_table(df, rows=['week'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
+        if len(df.index) > 0:
 
-        reindexed = table.reindex(index=fill_in_blanks(table.index), fill_value=np.int64(0))
-        noncum = reindexed.fillna(0)
-        if cumulative:
-            cumtab = noncum.cumsum(axis=0)
+            table = pd.tools.pivot.pivot_table(df, rows=['week'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
 
-            # For some readon the name of the index gets blown away by the reindex
-            cumtab.index.name = table.index.name
+            reindexed = table.reindex(index=fill_in_blanks(table.index), fill_value=np.int64(0))
+            noncum = reindexed.fillna(0)
+            if cumulative:
+                cumtab = noncum.cumsum(axis=0)
 
-            return cumtab
+                # For some readon the name of the index gets blown away by the reindex
+                cumtab.index.name = table.index.name
+
+                return cumtab
+
+            else:
+
+                return noncum
 
         else:
 
-            return noncum
+            return None
+
 
 class JiraWrapper(object):
     """
@@ -319,10 +367,16 @@ class JiraWrapper(object):
         self.jira = jira.client.JIRA({'server': config['server']},
                                      basic_auth=(config['username'], config['password']))
 
+        self.categories = None
+        self.cycles = None
+        self.types = None
 
-        self.categories = config['categories']
-        self.cycles = config['cycles']
-        self.types = config['types']
+        try:
+            self.categories = config['categories']
+            self.cycles = config['cycles']
+            self.types = config['types']
+        except KeyError:
+            pass
 
     def issues(self):
         """
