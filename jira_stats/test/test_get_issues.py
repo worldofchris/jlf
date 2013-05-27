@@ -36,14 +36,6 @@ class MockFields(object):
 
 class MockIssue(object):
 
-                # issue_row = {'swimlane':   issue.swimlane,
-                #              'id':         issue.key,
-                #              'week':       datetime.strptime(resolution_date[:10], '%Y-%m-%d').isocalendar()[1],
-                #              'project':    f.project.name,
-                #              'type':       f.issuetype.name,
-                #              'components': [],
-                #              'count':   1}
-
     def __init__(self,
                  key,
                  resolution_date,
@@ -73,12 +65,19 @@ class TestGetMetrics(unittest.TestCase):
                     "ignore": "Reopened"}
     }
 
+    types = {
+        "value": ['Data Request', 'Improve Feature'],
+        "failure": ['Defect'],
+        "overhead": ['Task', 'Infrastructure']
+    }
+
     jira_config = {
         'server': 'jiratron.worldofchris.com',
         'username': 'mrjira',
         'password': 'foo',
         'categories': categories,
-        'cycles': cycles
+        'cycles': cycles,
+        'types': types
     }
 
     dummy_issues_1 = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect'),
@@ -86,12 +85,27 @@ class TestGetMetrics(unittest.TestCase):
                       MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect')]
 
     dummy_issues_2 = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect'),
-                      MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect'),
+                      MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Improve Feature'),
                       MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect')]
 
     dummy_issues_3 = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect'),
                       MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect'),
                       MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect')]
+
+    def setUp(self):
+
+        unstub()
+        import jira.client
+
+        self.mock_jira = jira.client.JIRA()
+
+        when(self.mock_jira).search_issues(any(),
+                                      startAt=any(),
+                                      maxResults=any()).thenReturn(self.dummy_issues_1).thenReturn(self.dummy_issues_2).thenReturn(self.dummy_issues_3)
+
+
+        when(jira.client).JIRA(any(), basic_auth=any()).thenReturn(self.mock_jira)
+
 
     def testGetCumulativeThroughputTable(self):
         """
@@ -121,16 +135,6 @@ class TestGetMetrics(unittest.TestCase):
                                             np.int64(3)],
                                             index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
 
-        import jira.client
-
-        unstub
-        mock_jira = jira.client.JIRA()
-        when(mock_jira).search_issues(any(),
-                                      startAt=any(),
-                                      maxResults=any()).thenReturn(self.dummy_issues_1).thenReturn(self.dummy_issues_2).thenReturn(self.dummy_issues_3)
-
-
-        when(jira.client).JIRA(any(), basic_auth=any()).thenReturn(mock_jira)
 
         expected_frame = pd.DataFrame(expected)
 
@@ -176,3 +180,82 @@ class TestGetMetrics(unittest.TestCase):
             actual_week_start = week_start_date(issue['year'], issue['week'])
             assert issue['week_start'] == actual_week_start, actual_week_start
 
+
+    def testGetDifferentWorkTypes(self):
+        """
+        In order to see how our throughput is split across value work, failure work and operational
+        overhead we want to be able to specify the work type we are interested in when we ask for throughput.
+        """
+
+        expected = {'Ops Tools-value': pd.Series([np.int64(1),
+                                            np.int64(1),
+                                            np.int64(1),
+                                            np.int64(1),
+                                            np.int64(2),
+                                            np.int64(3)],
+                                            index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']),
+                    'Ops Tools-failure':    pd.Series([np.int64(1),
+                                            np.int64(1),
+                                            np.int64(1),
+                                            np.int64(1),
+                                            np.int64(2),
+                                            np.int64(3)],
+                                            index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']),
+                    'Ops Tools-overheard':   pd.Series([np.int64(1),
+                                            np.int64(1),
+                                            np.int64(1),
+                                            np.int64(1),
+                                            np.int64(2),
+                                            np.int64(3)],
+                                            index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
+
+
+        expected_frame = pd.DataFrame(expected)
+
+        our_jira = JiraWrapper(config=self.jira_config)
+
+        work = our_jira.issues()
+
+        # We typically are not interested in this data cumulatively as we want to compare how we are split on a week by week basis
+
+        actual_frame = work.throughput(cumulative=False,
+                                       from_date=date(2012, 01, 01),
+                                       to_date=date(2012, 12, 31),
+                                       types=["value", "failure", "overhead"]
+                                       )
+
+        # assert False, actual_frame
+
+        # assert expected_frame == actual_frame, actual_frame
+
+
+    def testGetMitchells(self):
+
+        """
+        After Benjamin Mitchell's item history tracking:
+        http://blog.benjaminm.net/2012/06/26/how-to-study-the-flow-or-work-with-kanban-cards
+
+        and our own
+
+        Very Hungry Catapiller
+
+        """
+
+        expected = {'FEATURE-1': pd.Series(['2012-10-10', 
+                                            'open', np.int64(10), 
+                                            'closed', np.int64(3),
+                                            None, None],
+                                            index=['start-date', 
+                                                   'state', 'duration',
+                                                   'state', 'duration',
+                                                   'state', 'duration',]),
+                    'FEATURE-2': pd.Series(['2012-10-10', 
+                                            'open', np.int64(10),
+                                            'in progress', np.int64(2), 
+                                            'closed', np.int64(3)],
+                                            index=['start-date', 
+                                                   'state', 'duration',
+                                                   'state', 'duration',
+                                                   'state', 'duration',])}
+
+        expected_frame = pd.DataFrame(expected)

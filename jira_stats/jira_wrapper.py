@@ -94,22 +94,62 @@ def get_cycle_time(histories, start_state=START_STATE, end_state=END_STATE, reop
     return ((end_date - start_date).days) + 1
 
 
+def get_time_in_states(histories, from_date, until_date):
+    """
+    How long did an issue spend in each state in its history.
+
+    For the first state it was in count 'from' the start of the period we
+    are interested in, typically when the issue was created
+
+    For the last state it was in count from the time the state was entered
+    until the date specified in 'until' - typically today's date
+    """
+
+    time_in_states = []
+
+    current_state = None
+    prev_state_change_date = from_date
+
+    for history in histories:
+        for item in history.items:
+            if item.field == 'status':
+                                
+                state_change_date = datetime.strptime(history.created[:10], '%Y-%m-%d').date()
+
+                days_in_state = state_change_date - prev_state_change_date
+
+                if current_state is None:
+                    current_state = item.fromString
+
+                time_in_states.append({'state': current_state,
+                                       'days': days_in_state.days})
+
+                current_state = item.toString
+                prev_state_change_date = state_change_date
+
+    final_state_days = until_date - prev_state_change_date
+
+    time_in_states.append({'state': current_state,
+                           'days':  final_state_days.days})
+
+    return time_in_states
+
+
 class JiraIssues(object):
     """
     A set of categorised issues from which we can extract our standard metrics
     """
 
-    def __init__(self, jira, categories, cycles):
+    def __init__(self, jira, categories, cycles, types):
 
         self.jira = jira
         self.categories = categories
         self.cycles = cycles
+        self.types = types
 
-        self.queued = None
-        self.wip = None
-        self.done = None
+        self.jira_issues = None
 
-    def get_issues(self, jira, filter, filter_by_category=None):
+    def get_issues_from_jira(self, jira, filter, filter_by_category=None):
         """
         Get the actual issues out of jira
         """
@@ -165,10 +205,9 @@ class JiraIssues(object):
 
     @property
     def issues(self):
-
         issue_rows = []
 
-        for issue in self.done:
+        for issue in self.jira_issues:
             f = issue.fields
 
             resolution_date_str = f.resolutiondate
@@ -195,19 +234,29 @@ class JiraIssues(object):
 
         return df
 
-    def throughput(self, from_date, to_date, cumulative=True, category=None):
+    def throughput(self,
+                   from_date,
+                   to_date,
+                   cumulative=True,
+                   category=None,
+                   types=None):
         """
         Return the throughput for our issues
         """
 
-        if self.done is None:
+        if self.jira_issues is None:
 
-            jql = ' AND issuetype in standardIssueTypes() AND resolution = Fixed AND status in (Resolved, Closed)'
-            self.done = self.get_issues(self.jira, jql, category)
+            """
+            We want to exclude subtasks and anything that was not resolved as fixed 
+            """
+            counts_towards_throughput = ' AND issuetype in standardIssueTypes() AND resolution = Fixed AND status in (Resolved, Closed)'
+            self.jira_issues = self.get_issues_from_jira(self.jira, 
+                                                         counts_towards_throughput, 
+                                                         category)
 
         issue_rows = []
 
-        for issue in self.done:
+        for issue in self.jira_issues:
             f = issue.fields
 
             resolution_date_str = f.resolutiondate
@@ -218,7 +267,15 @@ class JiraIssues(object):
 
                 if (resolution_date.date() >= from_date) and (resolution_date.date() <= to_date):
 
-                    issue_row = {'swimlane':   issue.category,
+                    swimlane = issue.category
+
+                    # Are we grouping by work type?
+                    if types is not None:
+                        for type_grouping in types:
+                            if f.issuetype.name in self.types[type_grouping]:
+                                swimlane = swimlane + '-' + type_grouping
+
+                    issue_row = {'swimlane':   swimlane,
                                  'id':         issue.key,
                                  'week':       week_start_date(resolution_date.isocalendar()[0],
                                                                resolution_date.isocalendar()[1]).strftime('%Y-%m-%d'),
@@ -238,13 +295,17 @@ class JiraIssues(object):
 
         reindexed = table.reindex(index=fill_in_blanks(table.index), fill_value=np.int64(0))
         noncum = reindexed.fillna(0)
-        cumtab = noncum.cumsum(axis=0)
+        if cumulative:
+            cumtab = noncum.cumsum(axis=0)
 
-        # For some readon the name of the index gets blown away by the reindex
-        cumtab.index.name = table.index.name
+            # For some readon the name of the index gets blown away by the reindex
+            cumtab.index.name = table.index.name
 
-        return cumtab
+            return cumtab
 
+        else:
+
+            return noncum
 
 class JiraWrapper(object):
     """
@@ -258,13 +319,19 @@ class JiraWrapper(object):
         self.jira = jira.client.JIRA({'server': config['server']},
                                      basic_auth=(config['username'], config['password']))
 
+
         self.categories = config['categories']
         self.cycles = config['cycles']
+        self.types = config['types']
 
     def issues(self):
         """
         Issues for a given set of categories or all if no categories specified
         """
         if self.issue_collection is None:
-            self.issue_collection = JiraIssues(self.jira, self.categories, self.cycles)
+            self.issue_collection = JiraIssues(self.jira,
+                                   self.categories,
+                                   self.cycles,
+                                   self.types)
+
         return self.issue_collection
