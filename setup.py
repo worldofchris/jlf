@@ -10,6 +10,7 @@ setup(
     platforms=["Any"],
     packages=['jira_stats'],
     include_package_data=True,
+    scripts=['bin/jlf'],
     install_requires=[
         'python-dateutil==1.5',
         'numpy',
