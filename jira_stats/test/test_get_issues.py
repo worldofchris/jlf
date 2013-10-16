@@ -244,7 +244,6 @@ class TestGetMetrics(unittest.TestCase):
 
         # assert expected_frame == actual_frame, actual_frame
 
-    @unittest.skip("Next test...")
     def testGetFailureDemandCreatedOverTime(self):
 
         """
@@ -270,7 +269,6 @@ class TestGetMetrics(unittest.TestCase):
                                     to_date=date(2012, 12, 31),
                                     types=["failure"])
 
-        assert False, actual_frame
 
     def testGetMitchells(self):
 
@@ -338,7 +336,6 @@ class TestGetMetrics(unittest.TestCase):
         actual_frame = work.history
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
-    @unittest.skip("Next test...")
     def testCreateHistogram(self):
 
         """
