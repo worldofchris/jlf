@@ -11,7 +11,7 @@ from jira_stats.jira_wrapper import fill_in_blanks, week_start_date
 from pandas.util.testing import assert_frame_equal
 
 from mockito import when, any, unstub
-
+from jira_mocks import mockHistory, mockItem, START_STATE, END_STATE 
 
 class MockProject(object):
 
@@ -27,12 +27,25 @@ class MockIssueType(object):
 
 class MockFields(object):
 
-    def __init__(self, resolutiondate, project_name, issuetype_name):
+    def __init__(self,
+                 resolutiondate,
+                 project_name,
+                 issuetype_name,
+                 created=None):
         self.issuetype = MockIssueType(issuetype_name)
         self.resolutiondate = resolutiondate
         self.project = MockProject(project_name)
         self.components = []
+        self.created = created
+        self.summary = None
 
+
+class MockChangelog(object):
+
+    def __init__(self):
+        self.histories = [mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                          mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+                          mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])]
 
 class MockIssue(object):
 
@@ -40,12 +53,18 @@ class MockIssue(object):
                  key,
                  resolution_date,
                  project_name,
-                 issuetype_name):
+                 issuetype_name,
+                 created=None):
 
         self.key = key
-        self.fields = MockFields(resolution_date, project_name, issuetype_name)
+        self.fields = MockFields(resolution_date,
+                                 project_name,
+                                 issuetype_name,
+                                 created)
         self.project = MockProject(project_name)
         self.category = None
+        self.changelog = None
+        self.created = created
 
 
 class TestGetMetrics(unittest.TestCase):
@@ -80,17 +99,17 @@ class TestGetMetrics(unittest.TestCase):
         'types': types
     }
 
-    dummy_issues_1 = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect'),
-                      MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect'),
-                      MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect')]
+    dummy_issues_1 = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
+                      MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
+                      MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01')]
 
-    dummy_issues_2 = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect'),
-                      MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Improve Feature'),
-                      MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect')]
+    dummy_issues_2 = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
+                      MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Improve Feature', created='2012-01-01'),
+                      MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01')]
 
-    dummy_issues_3 = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect'),
-                      MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect'),
-                      MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect')]
+    dummy_issues_3 = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
+                      MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
+                      MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01')]
 
     def setUp(self):
 
@@ -100,12 +119,10 @@ class TestGetMetrics(unittest.TestCase):
         self.mock_jira = jira.client.JIRA()
 
         when(self.mock_jira).search_issues(any(),
-                                      startAt=any(),
-                                      maxResults=any()).thenReturn(self.dummy_issues_1).thenReturn(self.dummy_issues_2).thenReturn(self.dummy_issues_3)
-
+                                           startAt=any(),
+                                           maxResults=any()).thenReturn(self.dummy_issues_1).thenReturn(self.dummy_issues_2).thenReturn(self.dummy_issues_3)
 
         when(jira.client).JIRA(any(), basic_auth=any()).thenReturn(self.mock_jira)
-
 
     def testGetCumulativeThroughputTable(self):
         """
@@ -134,7 +151,6 @@ class TestGetMetrics(unittest.TestCase):
                                             np.int64(2),
                                             np.int64(3)],
                                             index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
-
 
         expected_frame = pd.DataFrame(expected)
 
@@ -228,34 +244,106 @@ class TestGetMetrics(unittest.TestCase):
 
         # assert expected_frame == actual_frame, actual_frame
 
+    @unittest.skip("Next test...")
+    def testGetFailureDemandCreatedOverTime(self):
+
+        """
+        How much failure demand are we creating?  Is it going up or down?
+        """
+
+        dummy_issues = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-02'),
+                        MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-08'),
+                        MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect', created='2012-01-09')]
+
+        expected = {'Portal': pd.Series([np.int64(1),
+                                         np.int64(1)],
+                                         index=['2012-01-01', '2012-01-07'])}
+
+        expected_frame = pd.DataFrame(expected)
+
+        our_jira = JiraWrapper(config=self.jira_config)
+
+        work = our_jira.issues()
+
+        actual_frame = work.created(cumulative=False,
+                                    from_date=date(2012, 01, 01),
+                                    to_date=date(2012, 12, 31),
+                                    types=["failure"])
+
+        assert False, actual_frame
 
     def testGetMitchells(self):
 
         """
         After Benjamin Mitchell's item history tracking:
         http://blog.benjaminm.net/2012/06/26/how-to-study-the-flow-or-work-with-kanban-cards
-
-        and our own
-
-        Very Hungry Catapiller
-
         """
 
-        expected = {'FEATURE-1': pd.Series(['2012-10-10', 
-                                            'open', np.int64(10), 
-                                            'closed', np.int64(3),
-                                            None, None],
-                                            index=['start-date', 
-                                                   'state', 'duration',
-                                                   'state', 'duration',
-                                                   'state', 'duration',]),
-                    'FEATURE-2': pd.Series(['2012-10-10', 
-                                            'open', np.int64(10),
-                                            'in progress', np.int64(2), 
-                                            'closed', np.int64(3)],
-                                            index=['start-date', 
-                                                   'state', 'duration',
-                                                   'state', 'duration',
-                                                   'state', 'duration',])}
+        expected = {'PORTAL-1': pd.Series(['In Progress',
+                                           'In Progress',
+                                           'pending',
+                                           'pending',
+                                           'pending',
+                                           'pending',
+                                           'Customer Approval'], 
+                                          index=pd.to_datetime(['2012-01-01',
+                                                 '2012-01-02',
+                                                 '2012-01-03',
+                                                 '2012-01-04',
+                                                 '2012-01-05',
+                                                 '2012-01-06',
+                                                 '2012-01-07'])),
+                    'PORTAL-2': pd.Series(['In Progress',
+                                           'In Progress',
+                                           'pending',
+                                           'pending',
+                                           'pending',
+                                           'pending',
+                                           'Customer Approval'], 
+                                          index=pd.to_datetime(['2012-01-01',
+                                                 '2012-01-02',
+                                                 '2012-01-03',
+                                                 '2012-01-04',
+                                                 '2012-01-05',
+                                                 '2012-01-06',
+                                                 '2012-01-07'])),
+                    'PORTAL-3': pd.Series(['In Progress',
+                                           'In Progress',
+                                           'pending',
+                                           'pending',
+                                           'pending',
+                                           'pending',
+                                           'Customer Approval'], 
+                                          index=pd.to_datetime(['2012-01-01',
+                                                 '2012-01-02',
+                                                 '2012-01-03',
+                                                 '2012-01-04',
+                                                 '2012-01-05',
+                                                 '2012-01-06',
+                                                 '2012-01-07']))}
 
+        for dummy_issue in self.dummy_issues_1:
+            dummy_issue.changelog = MockChangelog()
+
+        for dummy_issue in self.dummy_issues_2:
+            dummy_issue.changelog = MockChangelog()
+
+        for dummy_issue in self.dummy_issues_3:
+            dummy_issue.changelog = MockChangelog()
+
+        our_jira = JiraWrapper(config=self.jira_config)
+        work = our_jira.issues()
         expected_frame = pd.DataFrame(expected)
+
+        actual_frame = work.history
+        assert_frame_equal(actual_frame, expected_frame), actual_frame
+
+    @unittest.skip("Next test...")
+    def testCreateHistogram(self):
+
+        """
+        We want to see how many of our features fall into a number of
+        pre determined times
+        """
+
+        pass

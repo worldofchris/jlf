@@ -30,7 +30,9 @@ def fill_in_blanks(index):
     start_date = datetime.strptime(index_list[0][:10], '%Y-%m-%d')
     end_date = datetime.strptime(index_list[-1][:10], '%Y-%m-%d')
 
-    num_weeks = rrule.rrule(rrule.WEEKLY, dtstart=start_date, until=end_date).count()
+    num_weeks = rrule.rrule(rrule.WEEKLY,
+                            dtstart=start_date,
+                            until=end_date).count()
 
     new_index = [week_start_date((start_date + timedelta(weeks=i)).year,
                                  (start_date + timedelta(weeks=i)).isocalendar()[1]).strftime('%Y-%m-%d') for i in range(0, num_weeks)]
@@ -51,7 +53,11 @@ def week_start_date(year, week):
     return d + delta
 
 
-def get_cycle_time(histories, start_state=START_STATE, end_state=END_STATE, reopened_state=REOPENED_STATE):
+def get_cycle_time(histories,
+                   start_state=START_STATE,
+                   end_state=END_STATE,
+                   reopened_state=REOPENED_STATE):
+
     """Calculate how long it has taken an issue to get from START_STATE
        to END_STATE"""
 
@@ -66,11 +72,13 @@ def get_cycle_time(histories, start_state=START_STATE, end_state=END_STATE, reop
 
                 if item.toString == start_state:
 
-                    new_start_date = datetime.strptime(history.created[:10], '%Y-%m-%d')
+                    new_start_date = datetime.strptime(history.created[:10],
+                                                       '%Y-%m-%d')
 
                 if item.fromString == start_state:
 
-                    new_start_date = datetime.strptime(history.created[:10], '%Y-%m-%d')
+                    new_start_date = datetime.strptime(history.created[:10],
+                                                       '%Y-%m-%d')
 
                 if new_start_date is not None:
 
@@ -82,11 +90,14 @@ def get_cycle_time(histories, start_state=START_STATE, end_state=END_STATE, reop
 
                 if item.toString == end_state:
 
-                    # We ignore transitions to end_state if they are from reopened.
-                    # This is because we sometime have to re-open tickets just to fix
+                    # We ignore transitions to end_state if
+                    # they are from reopened.
+                    # This is because we sometime have to re-open
+                    # tickets just to fix
                     # details of ownership, component, type or resolution.
                     if item.fromString != reopened_state:
-                        end_date = datetime.strptime(history.created[:10], '%Y-%m-%d')
+                        end_date = datetime.strptime(history.created[:10],
+                                                     '%Y-%m-%d')
 
     if start_date is None or end_date is None:
         return None
@@ -94,7 +105,7 @@ def get_cycle_time(histories, start_state=START_STATE, end_state=END_STATE, reop
     return ((end_date - start_date).days) + 1
 
 
-def get_time_in_states(histories, from_date, until_date):
+def get_time_in_states(histories, from_date=None, until_date=None):
     """
     How long did an issue spend in each state in its history.
 
@@ -109,6 +120,9 @@ def get_time_in_states(histories, from_date, until_date):
 
     current_state = None
 
+    if from_date is None:
+        from_date = date(1970, 01, 01)
+
     if hasattr(from_date, 'date'):
         prev_state_change_date = from_date.date()
     else:
@@ -117,8 +131,9 @@ def get_time_in_states(histories, from_date, until_date):
     for history in histories:
         for item in history.items:
             if item.field == 'status':
-                                
-                state_change_date = datetime.strptime(history.created[:10], '%Y-%m-%d').date()
+
+                state_change_date = datetime.strptime(history.created[:10],
+                                                      '%Y-%m-%d').date()
 
                 days_in_state = state_change_date - prev_state_change_date
 
@@ -131,10 +146,14 @@ def get_time_in_states(histories, from_date, until_date):
                 current_state = item.toString
                 prev_state_change_date = state_change_date
 
-    final_state_days = until_date - prev_state_change_date
+    if until_date is not None:
+        final_state_days = until_date - prev_state_change_date
 
-    time_in_states.append({'state': current_state,
-                           'days':  final_state_days.days})
+        time_in_states.append({'state': current_state,
+                               'days':  final_state_days.days})
+    else:
+        time_in_states.append({'state': current_state,
+                               'days':  1})
 
     return time_in_states
 
@@ -193,10 +212,12 @@ class JiraIssues(object):
                     issue.category = category
                     try:
                         for cycle in self.cycles:
-                            setattr(issue, cycle, get_cycle_time(issue.changelog.histories,
-                                                                 start_state=self.cycles[cycle]['start'],
-                                                                 end_state=self.cycles[cycle]['end'],
-                                                                 reopened_state=self.cycles[cycle]['ignore']))
+                            setattr(issue,
+                                    cycle,
+                                    get_cycle_time(issue.changelog.histories,
+                                                   start_state=self.cycles[cycle]['start'],
+                                                   end_state=self.cycles[cycle]['end'],
+                                                   reopened_state=self.cycles[cycle]['ignore']))
 
                     except AttributeError:
                         pass
@@ -211,7 +232,10 @@ class JiraIssues(object):
 
         return issues
 
-    def issues_as_rows(self, issues):
+    def issues_as_rows(self, issues, types=None):
+
+        # TODO: Decide if this should be a class / helper method?
+        # TODO: See if has any overlap with throughput function
 
         issue_rows = []
 
@@ -221,7 +245,8 @@ class JiraIssues(object):
             resolution_date_str = f.resolutiondate
 
             if resolution_date_str is not None:
-                resolution_date = datetime.strptime(resolution_date_str[:10], '%Y-%m-%d')
+                resolution_date = datetime.strptime(resolution_date_str[:10],
+                                                    '%Y-%m-%d')
 
                 week = week_start_date(resolution_date.isocalendar()[0],
                                        resolution_date.isocalendar()[1]).strftime('%Y-%m-%d')
@@ -230,28 +255,61 @@ class JiraIssues(object):
 
                 week = None
 
-            time_in_states = get_time_in_states(issue.changelog.histories, 
-                                                datetime.strptime(f.created[:10], '%Y-%m-%d'),
-                                                date.today())
+            date_created = datetime.strptime(f.created[:10], '%Y-%m-%d')
+            week_created = week_start_date(date_created.isocalendar()[0],
+                                           date_created.isocalendar()[1]).strftime('%Y-%m-%d')
 
-            since = time_in_states[-1]['days']
+            if issue.changelog is not None:
+                time_in_states = get_time_in_states(issue.changelog.histories,
+                                                    datetime.strptime(f.created[:10],
+                                                                      '%Y-%m-%d'),
+                                                    date.today())
 
-            issue_row = {'swimlane':   issue.category,
-                         'id':         issue.key,
-                         'name':       f.summary,
-                         'project':    f.project.name,
-                         'type':       f.issuetype.name,
-                         'components': [],
-                         'week':       week,
-                         'since':      since}
+                since = time_in_states[-1]['days']
 
-            for cycle in self.cycles:
-                issue_row[cycle] = getattr(issue, cycle)
+            else:
 
-            for component in f.components:
-                issue_row['components'].append(component.name)
+                since = None
 
-            issue_rows.append(issue_row)
+            include = True
+
+            # TODO: This looks like a bit of a hack.
+            # Can we do without iterating over loop, seeing as we
+            # only ever want one swimlane/category combination?
+
+            swimlane = issue.category
+
+            if types is not None and self.types is not None:
+                include = False
+                for type_grouping in types:
+                    if f.issuetype.name in self.types[type_grouping]:
+                        swimlane = swimlane + '-' + type_grouping
+                        include = True
+
+            if include:
+
+                issue_row = {'swimlane':     swimlane,
+                             'id':           issue.key,
+                             'created':      f.created,
+                             'week_created': week_created,
+                             'name':         f.summary,
+                             'project':      f.project.name,
+                             'type':         f.issuetype.name,
+                             'components':   [],
+                             'week':         week,
+                             'since':        since,
+                             'count':        1}
+
+                for cycle in self.cycles:
+                    try:
+                        issue_row[cycle] = getattr(issue, cycle)
+                    except AttributeError:
+                        pass
+
+                for component in f.components:
+                    issue_row['components'].append(component.name)
+
+                issue_rows.append(issue_row)
 
         return issue_rows
 
@@ -279,6 +337,73 @@ class JiraIssues(object):
         df = pd.DataFrame(issue_rows)
         return df
 
+    @property
+    def history(self):
+
+        if self.done_issues is None:
+            self.get_done_issues()
+
+        history = {}
+
+        for issue in self.done_issues:
+
+
+            from_date = datetime.strptime(issue.created, '%Y-%m-%d')
+
+            issue_history = get_time_in_states(issue.changelog.histories, from_date=from_date)
+
+            issue_day_history = []
+            total_days = 0
+
+            for state_days in issue_history:
+                state = state_days['state']
+                days = state_days['days']
+
+                days_in_state = [state] * days
+
+                issue_day_history += days_in_state
+                total_days += days
+
+            dates = [ from_date + timedelta(days=x) for x in range(0, total_days) ]
+            history[issue.key] = pd.Series(issue_day_history, index=dates)
+
+        df = pd.DataFrame(history)
+
+        return df
+
+    def created(self,
+                from_date,
+                to_date,
+                cumulative=True,
+                category=None,
+                types=None):
+        """
+        Return the number of issues created each week
+        """
+
+        if self.ongoing_issues is None:
+            self.ongoing_issues = self.get_issues_from_jira(self.jira)
+
+        issue_rows = self.issues_as_rows(self.ongoing_issues, types)
+
+        # Does ongoing exclude done in its query?
+        df = pd.DataFrame(issue_rows)
+        table = pd.tools.pivot.pivot_table(df, rows=['week_created'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
+        return table
+
+    def get_done_issues(self, category=None):
+
+        """
+        We want to exclude subtasks and anything that was not resolved as fixed
+        """
+        counts_towards_throughput = ' AND issuetype in standardIssueTypes() AND resolution = Fixed AND status in (Resolved, Closed)'
+
+        self.done_issues = self.get_issues_from_jira(self.jira,
+                                                     counts_towards_throughput,
+                                                     category)
+
+
+
     def throughput(self,
                    from_date,
                    to_date,
@@ -290,14 +415,7 @@ class JiraIssues(object):
         """
 
         if self.done_issues is None:
-
-            """
-            We want to exclude subtasks and anything that was not resolved as fixed
-            """
-            counts_towards_throughput = ' AND issuetype in standardIssueTypes() AND resolution = Fixed AND status in (Resolved, Closed)'
-            self.done_issues = self.get_issues_from_jira(self.jira,
-                                                         counts_towards_throughput,
-                                                         category)
+            self.get_done_issues(category=category)
 
         issue_rows = []
 
