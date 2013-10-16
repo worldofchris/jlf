@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from jira_stats.jira_wrapper import get_cycle_time, get_time_in_states
-from jira_mocks import mockHistory, mockItem, START_STATE, END_STATE, REOPENED_STATE
+from jira_stats.test.jira_mocks import mockHistory, mockItem, START_STATE, END_STATE, REOPENED_STATE
 
 import unittest
 from datetime import date

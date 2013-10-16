@@ -11,7 +11,7 @@ from jira_stats.jira_wrapper import fill_in_blanks, week_start_date
 from pandas.util.testing import assert_frame_equal
 
 from mockito import when, any, unstub
-from jira_mocks import mockHistory, mockItem, START_STATE, END_STATE 
+from jira_stats.test.jira_mocks import mockHistory, mockItem, START_STATE, END_STATE 
 
 class MockProject(object):
 
