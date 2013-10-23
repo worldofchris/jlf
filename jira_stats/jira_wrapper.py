@@ -172,6 +172,7 @@ class JiraIssues(object):
 
         self.done_issues = None
         self.ongoing_issues = None
+        self.history = None
 
     def get_issues_from_jira(self, jira, filter=None, filter_by_category=None):
         """
@@ -331,43 +332,51 @@ class JiraIssues(object):
         All issues that have been completed
         """
         if self.done_issues is None:
-            assert False, "Need to go and get these..."
+            self.get_done_issues()
 
         issue_rows = self.issues_as_rows(self.done_issues)
         df = pd.DataFrame(issue_rows)
         return df
 
-    @property
-    def history(self):
+    def get_history(self, from_date=None, until_date=None):
 
-        if self.done_issues is None:
-            self.get_done_issues()
+        if self.history is None:
 
-        history = {}
+            if self.done_issues is None:
+                self.get_done_issues()
 
-        for issue in self.done_issues:
+            history = {}
 
+            for issue in self.done_issues:
 
-            from_date = datetime.strptime(issue.created, '%Y-%m-%d')
+                created_date = datetime.strptime(issue.fields.created[:10], '%Y-%m-%d')
 
-            issue_history = get_time_in_states(issue.changelog.histories, from_date=from_date)
+                issue_history = get_time_in_states(issue.changelog.histories, from_date=created_date, until_date=until_date)
 
-            issue_day_history = []
-            total_days = 0
+                issue_day_history = []
+                total_days = 0
 
-            for state_days in issue_history:
-                state = state_days['state']
-                days = state_days['days']
+                for state_days in issue_history:
+                    state = state_days['state']
+                    days = state_days['days']
 
-                days_in_state = [state] * days
+                    days_in_state = [state] * days
 
-                issue_day_history += days_in_state
-                total_days += days
+                    issue_day_history += days_in_state
+                    total_days += days
 
-            dates = [ from_date + timedelta(days=x) for x in range(0, total_days) ]
-            history[issue.key] = pd.Series(issue_day_history, index=dates)
+                dates = [ created_date + timedelta(days=x) for x in range(0, total_days) ]
 
-        df = pd.DataFrame(history)
+                try:
+                    history[issue.key] = pd.Series(issue_day_history, index=dates)
+                except AssertionError as e:
+                    print e
+                    print dates
+                    print issue_day_history
+
+                self.history = history
+
+        df = pd.DataFrame(self.history)
 
         return df
 
