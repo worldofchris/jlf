@@ -347,9 +347,6 @@ class TestGetMetrics(unittest.TestCase):
 
         actual_frame = work.get_history(until_date=date(2012, 1, 8))
 
-        print expected_frame
-        print actual_frame
-
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
 
@@ -358,6 +355,49 @@ class TestGetMetrics(unittest.TestCase):
         If we sort the Mitchells by day and then by state then we get a
         Cumulative Flow Diagram
         """
+
+        for dummy_issue in self.dummy_issues_1:
+            dummy_issue.changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                                   mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+                                                   mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+
+        for dummy_issue in self.dummy_issues_2:
+            dummy_issue.changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                                   mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+                                                   mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+
+        self.dummy_issues_3[0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                                          mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+                                                          mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+
+        self.dummy_issues_3[1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                                          mockHistory(u'2012-01-04T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+                                                          mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+
+        self.dummy_issues_3[2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                                          mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+                                                          mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+
+
+        expected = {pd.to_datetime('2012-01-01'): pd.Series([START_STATE, START_STATE, START_STATE], index=[0,1,2]),
+                    pd.to_datetime('2012-01-02'): pd.Series([START_STATE, START_STATE, START_STATE], index=[0,1,2]),
+                    pd.to_datetime('2012-01-03'): pd.Series([START_STATE, START_STATE, 'pending'], index=[0,1,2]),
+                    pd.to_datetime('2012-01-04'): pd.Series([START_STATE, 'pending', 'pending'], index=[0,1,2]),
+                    pd.to_datetime('2012-01-05'): pd.Series([START_STATE, 'pending', 'pending'], index=[0,1,2]),
+                    pd.to_datetime('2012-01-06'): pd.Series(['pending', 'pending', 'Customer Approval'], index=[0,1,2]),
+                    pd.to_datetime('2012-01-07'): pd.Series(['Customer Approval', 'Customer Approval', 'Customer Approval'], index=[0,1,2])}
+
+        our_jira = JiraWrapper(config=self.jira_config)
+        work = our_jira.issues()
+
+        expected_frame = pd.DataFrame(expected)
+
+        actual_frame = work.get_cfd(until_date=date(2012, 1, 8))
+
+        print actual_frame
+        print expected_frame
+
+        assert_frame_equal(actual_frame, expected_frame), actual_frame
 
 
 

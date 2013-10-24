@@ -29,7 +29,7 @@ def main():
     end_date = datetime.now()
     start_date = end_date - timedelta(weeks=args.num_weeks)
 
-    throughput_frame = work.throughput(cumulative=True,
+    throughput_frame = work.throughput(cumulative=False,
                                    from_date=start_date.date(),
                                    to_date=end_date.date(),
                                    category=args.swimlane_category)
@@ -46,6 +46,33 @@ def main():
 
     if ongoing_frame is not None:
         ongoing_frame.to_excel('ongoing.xls')
+
+    failure_frame = work.created(cumulative=False,
+                                 from_date=start_date.date(),
+                                 to_date=end_date.date(),
+                                 types=["failure"])
+
+    if failure_frame is not None:
+        failure_frame.to_excel('failure.xls')
+
+    try:
+        history_frame = work.get_history(from_date=start_date.date(),
+                                         until_date=end_date.date())
+
+        if history_frame is not None:
+            history_frame.to_excel('history.xls')
+    except:
+        pass
+
+    try:
+        cfd_frame = work.get_cfd(from_date=start_date.date(),
+                                 until_date=end_date.date())
+
+        if cfd_frame is not None:
+            cfd_frame.to_excel('cfd.xls')
+    except:
+        pass
+
 
 if __name__ == "__main__":
     main()

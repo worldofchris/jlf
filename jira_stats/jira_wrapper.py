@@ -14,6 +14,7 @@ from dateutil import rrule
 
 import pandas as pd
 import numpy as np
+import math
 
 """States between which we consider an issue to be being worked on
    for the purposes of calculating cycletime"""
@@ -379,6 +380,44 @@ class JiraIssues(object):
         df = pd.DataFrame(self.history)
 
         return df
+
+
+    def get_cfd(self, from_date=None, until_date=None):
+
+        if self.history is None:
+
+            self.get_history(from_date, until_date)
+
+        cfd = pd.DataFrame(self.history)
+        
+        days = {}
+
+        for day in cfd.index:
+            tickets = [] 
+            for ticket in cfd.ix[day]:
+                tickets.append(ticket)
+
+            def state_order(state):
+
+                try:
+                    states = ['Open',
+                              'Queued',
+                              'In Progress',
+                              'Awaiting Review',
+                              'Peer Review',
+                              'pending',
+                              'Customer Approval',
+                              'Closed']
+                    return states.index(state)
+                except ValueError:
+                    if type(state) == float:
+                        if math.isnan(state):
+                            return -1
+                    raise
+            
+            days[day] = sorted(tickets, key=state_order)
+
+        return pd.DataFrame(days)
 
     def created(self,
                 from_date,
