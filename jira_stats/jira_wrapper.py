@@ -164,15 +164,17 @@ class JiraIssues(object):
     A set of categorised issues from which we can extract our standard metrics
     """
 
-    def __init__(self, jira, categories, cycles, types):
+    def __init__(self, jira, categories, cycles, types, ongoing):
 
         self.jira = jira
         self.categories = categories
         self.cycles = cycles
         self.types = types
+        self.ongoing_states = ongoing
 
         self.done_issues = None
         self.ongoing_issues = None
+        self.all_issues = None
         self.history = None
 
     def get_issues_from_jira(self, jira, filter=None, filter_by_category=None):
@@ -185,6 +187,9 @@ class JiraIssues(object):
 
         for category in self.categories:
 
+            # This bit stinks - we are confusing getting the data from Jira with filtering it
+            # _after_ we've got it from Jira.
+            
             if filter_by_category is not None:
 
                 if category != filter_by_category:
@@ -291,15 +296,16 @@ class JiraIssues(object):
             if include:
 
                 issue_row = {'swimlane':     swimlane,
-                             'id':           issue.key,
-                             'created':      f.created,
-                             'week_created': week_created,
-                             'name':         f.summary,
-                             'project':      f.project.name,
                              'type':         f.issuetype.name,
-                             'components':   [],
+                             'id':           issue.key,
+                             'name':         f.summary,
+                             'status':       f.status.name, 
+                             'project':      f.project.name,
+                             'components':   None,
                              'week':         week,
                              'since':        since,
+                             'created':      f.created,
+                             'week_created': week_created,
                              'count':        1}
 
                 for cycle in self.cycles:
@@ -309,6 +315,8 @@ class JiraIssues(object):
                         pass
 
                 for component in f.components:
+                    if issue_row['components'] is None:
+                        issue_row['components'] = []
                     issue_row['components'].append(component.name)
 
                 issue_rows.append(issue_row)
@@ -321,7 +329,8 @@ class JiraIssues(object):
         All issues that are still in flight
         """
         if self.ongoing_issues is None:
-            self.ongoing_issues = self.get_issues_from_jira(self.jira)
+            filter = 'and (status in ({status_list})) and issuetype in standardIssueTypes()'.format(status_list = ', '.join('"{status}"'.format(status=status) for status in self.ongoing_states))
+            self.ongoing_issues = self.get_issues_from_jira(self.jira, filter=filter)
 
         issue_rows = self.issues_as_rows(self.ongoing_issues)
         df = pd.DataFrame(issue_rows)
@@ -335,7 +344,7 @@ class JiraIssues(object):
         if self.done_issues is None:
             self.get_done_issues()
 
-        issue_rows = self.issues_as_rows(self.done_issues)
+        issue_rows = self.issues_as_rows(self.done_issues) 
         df = pd.DataFrame(issue_rows)
         return df
 
@@ -401,13 +410,17 @@ class JiraIssues(object):
 
                 try:
                     states = ['Open',
+                              'Horizon',
                               'Queued',
                               'In Progress',
+                              'Blocked',
                               'Awaiting Review',
                               'Peer Review',
                               'pending',
                               'Customer Approval',
-                              'Closed']
+                              'Ready for Release',
+                              'Closed',
+                              'Resolved']
                     return states.index(state)
                 except ValueError:
                     if type(state) == float:
@@ -429,15 +442,18 @@ class JiraIssues(object):
         Return the number of issues created each week
         """
 
-        if self.ongoing_issues is None:
-            self.ongoing_issues = self.get_issues_from_jira(self.jira)
+        if self.all_issues is None:
+            self.all_issues = self.get_issues_from_jira(self.jira)
 
-        issue_rows = self.issues_as_rows(self.ongoing_issues, types)
+        issue_rows = self.issues_as_rows(self.all_issues, types)
 
         # Does ongoing exclude done in its query?
         df = pd.DataFrame(issue_rows)
         table = pd.tools.pivot.pivot_table(df, rows=['week_created'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
-        return table
+
+        reindexed = table.reindex(index=fill_in_blanks(table.index), fill_value=np.int64(0))
+        return reindexed
+
 
     def get_done_issues(self, category=None):
 
@@ -481,10 +497,13 @@ class JiraIssues(object):
                     swimlane = issue.category
 
                     # Are we grouping by work type?
+
                     if types is not None:
                         for type_grouping in types:
                             if f.issuetype.name in self.types[type_grouping]:
                                 swimlane = swimlane + '-' + type_grouping
+                            else:
+                                pass # print "Not counting " + f.issuetype.name 
 
                     issue_row = {'swimlane':   swimlane,
                                  'id':         issue.key,
@@ -511,7 +530,7 @@ class JiraIssues(object):
             if cumulative:
                 cumtab = noncum.cumsum(axis=0)
 
-                # For some readon the name of the index gets blown away by the reindex
+                # For some reason the name of the index gets blown away by the reindex
                 cumtab.index.name = table.index.name
 
                 return cumtab
@@ -540,11 +559,13 @@ class JiraWrapper(object):
         self.categories = None
         self.cycles = None
         self.types = None
+        self.ongoing = None
 
         try:
             self.categories = config['categories']
             self.cycles = config['cycles']
             self.types = config['types']
+            self.ongoing_states = config['ongoing']
         except KeyError:
             pass
 
@@ -552,10 +573,12 @@ class JiraWrapper(object):
         """
         Issues for a given set of categories or all if no categories specified
         """
+
         if self.issue_collection is None:
             self.issue_collection = JiraIssues(self.jira,
                                    self.categories,
                                    self.cycles,
-                                   self.types)
+                                   self.types,
+                                   self.ongoing_states)
 
         return self.issue_collection

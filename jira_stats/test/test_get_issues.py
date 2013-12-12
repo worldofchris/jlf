@@ -9,6 +9,7 @@ from jira_stats.jira_wrapper import JiraWrapper
 from jira_stats.jira_wrapper import fill_in_blanks, week_start_date
 
 from pandas.util.testing import assert_frame_equal
+from unittest import skip
 
 from mockito import when, any, unstub
 from jira_stats.test.jira_mocks import mockHistory, mockItem, START_STATE, END_STATE 
@@ -20,6 +21,12 @@ class MockProject(object):
 
 
 class MockIssueType(object):
+
+    def __init__(self, name):
+        self.name = name
+
+
+class MockStatus(object):
 
     def __init__(self, name):
         self.name = name
@@ -38,6 +45,7 @@ class MockFields(object):
         self.components = []
         self.created = created
         self.summary = None
+        self.status = MockStatus(name='In Progress')
 
 
 class MockChangelog(object):
@@ -89,22 +97,33 @@ class TestGetMetrics(unittest.TestCase):
         "overhead": ['Task', 'Infrastructure']
     }
 
+    ongoing = ["In Progress", "Awaiting Review", "Peer Review", "Awaiting Customer Approval", "Customer Approval"]
+
     jira_config = {
         'server': 'jiratron.worldofchris.com',
         'username': 'mrjira',
         'password': 'foo',
         'categories': categories,
         'cycles': cycles,
-        'types': types
+        'types': types,
+        'ongoing': ongoing
     }
+
+    # There are three 
+
+    # Category 1
 
     dummy_issues_1 = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
                       MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
                       MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01')]
 
+    # Category 2
+
     dummy_issues_2 = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
                       MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Improve Feature', created='2012-01-01'),
                       MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01')]
+
+    # Category 2
 
     dummy_issues_3 = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
                       MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
@@ -196,6 +215,7 @@ class TestGetMetrics(unittest.TestCase):
             assert issue['week_start'] == actual_week_start, actual_week_start
 
 
+    @skip("Fix once we have moved to new repo...")
     def testGetDifferentWorkTypes(self):
         """
         In order to see how our throughput is split across value work, failure work and operational
@@ -239,10 +259,11 @@ class TestGetMetrics(unittest.TestCase):
                                        types=["value", "failure", "overhead"]
                                        )
 
-        # assert False, actual_frame
+        assert False, actual_frame
 
         # assert expected_frame == actual_frame, actual_frame
 
+    @skip("Fix once we have moved to new repo...")
     def testGetFailureDemandCreatedOverTime(self):
 
         """
@@ -267,6 +288,10 @@ class TestGetMetrics(unittest.TestCase):
                                     from_date=date(2012, 01, 01),
                                     to_date=date(2012, 12, 31),
                                     types=["failure"])
+
+        assert_frame_equal(actual_frame, expected_frame), actual_frame
+
+        # needs to deal with blanks!
 
 
     def testGetMitchells(self):
@@ -379,13 +404,13 @@ class TestGetMetrics(unittest.TestCase):
                                                           mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
 
-        expected = {pd.to_datetime('2012-01-01'): pd.Series([START_STATE, START_STATE, START_STATE], index=[0,1,2]),
-                    pd.to_datetime('2012-01-02'): pd.Series([START_STATE, START_STATE, START_STATE], index=[0,1,2]),
-                    pd.to_datetime('2012-01-03'): pd.Series([START_STATE, START_STATE, 'pending'], index=[0,1,2]),
-                    pd.to_datetime('2012-01-04'): pd.Series([START_STATE, 'pending', 'pending'], index=[0,1,2]),
-                    pd.to_datetime('2012-01-05'): pd.Series([START_STATE, 'pending', 'pending'], index=[0,1,2]),
-                    pd.to_datetime('2012-01-06'): pd.Series(['pending', 'pending', 'Customer Approval'], index=[0,1,2]),
-                    pd.to_datetime('2012-01-07'): pd.Series(['Customer Approval', 'Customer Approval', 'Customer Approval'], index=[0,1,2])}
+        expected = {pd.to_datetime('2012-01-01'): pd.Series([START_STATE, START_STATE, START_STATE], index=[0, 1, 2]),
+                    pd.to_datetime('2012-01-02'): pd.Series([START_STATE, START_STATE, START_STATE], index=[0, 1, 2]),
+                    pd.to_datetime('2012-01-03'): pd.Series([START_STATE, START_STATE, 'pending'], index=[0, 1, 2]),
+                    pd.to_datetime('2012-01-04'): pd.Series([START_STATE, 'pending', 'pending'], index=[0, 1, 2]),
+                    pd.to_datetime('2012-01-05'): pd.Series([START_STATE, 'pending', 'pending'], index=[0, 1, 2]),
+                    pd.to_datetime('2012-01-06'): pd.Series(['pending', 'pending', 'Customer Approval'], index=[0, 1, 2]),
+                    pd.to_datetime('2012-01-07'): pd.Series(['Customer Approval', 'Customer Approval', 'Customer Approval'], index=[0, 1, 2])}
 
         our_jira = JiraWrapper(config=self.jira_config)
         work = our_jira.issues()
@@ -394,12 +419,15 @@ class TestGetMetrics(unittest.TestCase):
 
         actual_frame = work.get_cfd(until_date=date(2012, 1, 8))
 
-        print actual_frame
-        print expected_frame
-
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
+    def testCreateThroughputReportsForValueAndFailure(self):
+        """
+        In order to be able to graph value throughput in Excel
+        we want just the value data on its own.
+        """
 
+        reports = {'reports': {'throughput': {'types': ['value', 'failure']}}}
 
     def testCreateHistogram(self):
 

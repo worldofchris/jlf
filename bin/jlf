@@ -4,18 +4,34 @@ Get forward looking metrics from JIRA
 """
 
 from jira_stats.jira_wrapper import JiraWrapper
+from jira_stats.jira_wrapper import week_start_date
 
 import json
 from datetime import datetime, timedelta
 import argparse
+import os
+import pandas as pd
+
 
 def main():
 
     parser = argparse.ArgumentParser(description='Get forward looking metrics from JIRA')
 
-    parser.add_argument('-n', action="store", dest="num_weeks", type=int, default=6)
-    parser.add_argument('-c', action="store", dest="config_filename", default='config.json')
-    parser.add_argument('-s', action="store", dest="swimlane_category", default=None)
+    parser.add_argument('-n',
+                        action="store",
+                        dest="num_weeks",
+                        type=int,
+                        default=6)
+
+    parser.add_argument('-c',
+                        action="store",
+                        dest="config_filename",
+                        default='config.json')
+
+    parser.add_argument('-s',
+                        action="store",
+                        dest="swimlane_category",
+                        default=None)
 
     args = parser.parse_args()
 
@@ -29,50 +45,95 @@ def main():
     end_date = datetime.now()
     start_date = end_date - timedelta(weeks=args.num_weeks)
 
+    types = None
+
+    try:
+        types = [u'value', u'failure', u'operational overhead']
+    except KeyError:
+        pass
+
+
     throughput_frame = work.throughput(cumulative=False,
-                                   from_date=start_date.date(),
-                                   to_date=end_date.date(),
-                                   category=args.swimlane_category)
+                                       from_date=start_date.date(),
+                                       to_date=end_date.date(),
+                                       category=args.swimlane_category,
+                                       types=types)
+
+    cumulative_value_frame = work.throughput(cumulative=True,
+                                       from_date=start_date.date(),
+                                       to_date=end_date.date(),
+                                       category=args.swimlane_category,
+                                       types=types)
+
+
+    (excel_basename, ignore) = os.path.splitext(args.config_filename)
+    excel_filename = excel_basename + '.xlsx'
+
+    writer = pd.ExcelWriter(excel_filename, engine='xlsxwriter')
 
     if throughput_frame is not None:
-        throughput_frame.to_excel('throughput.xls')
+        throughput_frame.to_excel(writer, 'throughput')
 
-    done_frame = work.done
+    if cumulative_value_frame is not None:
+        cumulative_value_frame.to_excel(writer, 'cumulative_value_throughput')
 
-    if done_frame is not None:
-        done_frame.to_excel('done.xls')
+    last_week = week_start_date(end_date.isocalendar()[0], end_date.isocalendar()[1])
 
-    ongoing_frame = work.ongoing
+    # Components are arrays which cause XlsxWriter to explode, so removing for now
+
+    done_last_week = work.done[work.done['week'] == str(last_week)]
+
+    done_last_week_frame = done_last_week[['type', 'id', 'name']]
+
+    if done_last_week_frame is not None:
+
+        done_last_week_frame.to_excel(writer, 'done_last_week')
+
+    # Value work should be defined in config NOT hard coded here
+
+    done_value = work.done[work.done['type'].isin(['New Feature', 'Improve Feature', "Bespoke Report", "Load Partner Data"])]
+    done_value_frame = done_value[['id', 'name', 'develop', 'approve']]
+
+    if done_value_frame is not None:
+
+        done_value_frame.to_excel(writer, 'done_value')
+
+    ongoing_frame = work.ongoing[['type', 'id', 'week', 'name', 'status']].sort(['status'])
 
     if ongoing_frame is not None:
-        ongoing_frame.to_excel('ongoing.xls')
+        ongoing_frame.to_excel(writer, 'ongoing')
 
     failure_frame = work.created(cumulative=False,
                                  from_date=start_date.date(),
                                  to_date=end_date.date(),
                                  types=["failure"])
 
+    # Why does failure bring back _all_ weeks?
+
     if failure_frame is not None:
-        failure_frame.to_excel('failure.xls')
+        failure_frame.to_excel(writer, 'failure')
 
-    try:
-        history_frame = work.get_history(from_date=start_date.date(),
-                                         until_date=end_date.date())
+    # history_frame = work.get_history(from_date=start_date.date(),
+    #                                  until_date=end_date.date())
 
-        if history_frame is not None:
-            history_frame.to_excel('history.xls')
-    except:
-        pass
+    # if history_frame is not None:
+    #     try:
+    #         history_frame.to_excel('history.xls')
+    #     except:
+    #         pass
 
-    try:
-        cfd_frame = work.get_cfd(from_date=start_date.date(),
-                                 until_date=end_date.date())
+    # cfd_frame = None
 
-        if cfd_frame is not None:
-            cfd_frame.to_excel('cfd.xls')
-    except:
-        pass
+    # cfd_frame = work.get_cfd(from_date=start_date.date(),
+    #                          until_date=end_date.date())
 
+    # try:
+    #     if cfd_frame is not None:
+    #         cfd_frame.to_excel('cfd.xls')
+    # except ValueError:
+    #     pass
+
+    writer.save()
 
 if __name__ == "__main__":
     main()
