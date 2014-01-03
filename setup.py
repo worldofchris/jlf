@@ -19,7 +19,7 @@ setup(
         'numpy==1.7.1',
         'oauthlib==0.4.0',
         'openpyxl==1.6.2',
-        'pandas==0.13.0rc1-64-gceec8bf',
+        'pandas==0.12.0',
         'python-dateutil==1.5',
         'pytz==2013b',
         'requests==1.2.0',
