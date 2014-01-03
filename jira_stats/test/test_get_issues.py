@@ -203,6 +203,21 @@ class TestGetMetrics(unittest.TestCase):
 
         assert actual_index == expected_index, actual_index
 
+
+    def testFillInTheBlanksOverYearEnd(self):
+        """
+        This is not working for the week commencing 2013-12-30.
+        """
+
+        expected = {'bi-value': pd.Series([np.int64(1)], index=['2013-12-30'])}
+
+        expected_frame = pd.DataFrame(expected)
+        actual_index = fill_in_blanks(expected_frame.index)
+
+        expected_index = ['2013-12-30']
+
+        self.assertEqual(actual_index, expected_index)
+
     def testGetWeekIdentifier(self):
         """
         We graph throughput on a weekly basis so for a given issue we need to know which week it was completed in.
