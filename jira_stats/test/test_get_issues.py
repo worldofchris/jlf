@@ -486,11 +486,3 @@ class TestGetMetrics(unittest.TestCase):
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
-    def testCreateHistogram(self):
-
-        """
-        We want to see how many of our features fall into a number of
-        pre determined times
-        """
-
-        pass
