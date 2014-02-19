@@ -179,9 +179,14 @@ class JiraIssues(object):
         self.all_issues = None
         self.history = None
 
+    def __str__(self):
+        issues_as_string = "Jira Issues\ndone:\n{done}\nongoing:\n{ongoing}". format(done=self.done,
+                                                                                     ongoing=self.ongoing)
+        return issues_as_string
+
     def get_issues_from_jira(self, jira, filter=None, filter_by_category=None):
         """
-        Get the actual issues out of jira
+        Get the actual issues from Jira itself via the Jira REST API
         """
 
         batch_size = 100

@@ -19,6 +19,15 @@ def output_to_excel(workbook, dataframes):
 
 class TestOutputToExcel(unittest.TestCase):
 
+    def testCreateThroughputReportsForValueAndFailure(self):
+        """
+        In order to be able to graph value throughput in Excel
+        we want just the value data on its own.
+        """
+
+        reports = {'reports': {'throughput': {'types': ['value', 'failure']}}}
+
+
     def testOutputMultipleDataFramesToSingleWorkbook(self):
 
         expected_worksheets = ['one', 'two', 'three']

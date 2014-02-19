@@ -11,8 +11,12 @@ from jira_stats.jira_wrapper import fill_in_blanks, week_start_date
 from pandas.util.testing import assert_frame_equal
 from unittest import skip
 
-from mockito import when, any, unstub
-from jira_stats.test.jira_mocks import mockHistory, mockItem, START_STATE, END_STATE 
+from mockito import when, any, unstub, contains
+from jira_stats.test.jira_mocks import mockHistory, mockItem, START_STATE, END_STATE
+import copy
+
+import jira.client
+
 
 class MockProject(object):
 
@@ -109,7 +113,7 @@ class TestGetMetrics(unittest.TestCase):
         'ongoing': ongoing
     }
 
-    # There are three 
+    # There are three
 
     # Category 1
 
@@ -132,7 +136,6 @@ class TestGetMetrics(unittest.TestCase):
     def setUp(self):
 
         unstub()
-        import jira.client
 
         self.mock_jira = jira.client.JIRA()
 
@@ -140,7 +143,7 @@ class TestGetMetrics(unittest.TestCase):
                                            startAt=any(),
                                            maxResults=any()).thenReturn(self.dummy_issues_1).thenReturn(self.dummy_issues_2).thenReturn(self.dummy_issues_3)
 
-        when(jira.client).JIRA(any(), basic_auth=any()).thenReturn(self.mock_jira)
+        when(jira.client).JIRA(any(), basic_auth=any()).thenReturn(self.mock_jira)        
 
     def testGetCumulativeThroughputTable(self):
         """
@@ -203,7 +206,6 @@ class TestGetMetrics(unittest.TestCase):
 
         assert actual_index == expected_index, actual_index
 
-
     def testFillInTheBlanksOverYearEnd(self):
         """
         This is not working for the week commencing 2013-12-30.
@@ -230,39 +232,75 @@ class TestGetMetrics(unittest.TestCase):
             assert issue['week_start'] == actual_week_start, actual_week_start
 
 
-    @skip("Fix once we have moved to new repo...")
     def testGetDifferentWorkTypes(self):
         """
         In order to see how our throughput is split across value work, failure work and operational
         overhead we want to be able to specify the work type we are interested in when we ask for throughput.
         """
 
-        expected = {'Ops Tools-value': pd.Series([np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(2),
-                                            np.int64(3)],
-                                            index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']),
-                    'Ops Tools-failure':    pd.Series([np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(2),
-                                            np.int64(3)],
-                                            index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']),
-                    'Ops Tools-overheard':   pd.Series([np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(2),
-                                            np.int64(3)],
-                                            index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
+        unstub()
+        # Given these issue in Jira
 
+        # For our test data we want to cover value and failure demand and operational overhead.
+        # We are only interested in the week that each issue was resolved.
+
+        issue_types = {'Defect':          ['2012-10-08',
+                                           '2012-10-15',
+                                           '2012-10-22', '2012-10-22',
+                                           '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29',
+                                           '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05',
+                                           '2012-11-12'],
+                       'Task':            ['2012-10-08',
+                                           '2012-10-15', '2012-10-15',
+                                           '2012-10-22', '2012-10-22', '2012-10-22',
+                                           '2012-10-29',
+                                           '2012-11-05', '2012-11-05', '2012-11-05',
+                                           '2012-11-12', '2012-11-12'],
+                       'Improve Feature': ['2012-10-08',
+                                           '2012-10-15', '2012-10-15', '2012-10-15', '2012-10-15', '2012-10-15',
+                                           '2012-10-22', '2012-10-22', '2012-10-22', '2012-10-22', '2012-10-22', '2012-10-22', '2012-10-22',
+                                           '2012-10-29', '2012-10-29',
+                                           '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05',
+                                           '2012-11-12', '2012-11-12', '2012-11-12', '2012-11-12', '2012-11-12', '2012-11-12']}
+
+        dummy_issues = []
+        n = 0
+
+        for issue_type in issue_types:
+            for resolved in issue_types[issue_type]:
+                dummy_issues.append(MockIssue(key='PORTAL-{n}'.format(n=n),
+                                              resolution_date=resolved,
+                                              project_name='Portal',
+                                              issuetype_name=issue_type,
+                                              created='2012-01-01'))
+                n += 1
+
+        mock_jira = jira.client.JIRA()
+
+        when(mock_jira).search_issues(contains('='),
+                                      startAt=any(),
+                                      maxResults=any()).thenReturn(dummy_issues)
+
+        when(jira.client).JIRA(any(), basic_auth=any()).thenReturn(mock_jira)
+
+
+
+        expected = {'PORTAL-value':    pd.Series([ np.int64(1),  np.int64(5),  np.int64(7),  np.int64(2),   np.int64(6),  np.int64(6)],
+                                           index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29',  '2012-11-05', '2012-11-12']),
+                    'PORTAL-failure':  pd.Series([ np.int64(1),  np.int64(1),  np.int64(2),  np.int64(10),  np.int64(4),  np.int64(1)],
+                                           index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29',  '2012-11-05', '2012-11-12']),
+                    'PORTAL-overhead': pd.Series([ np.int64(1),  np.int64(2),  np.int64(3),  np.int64(1),   np.int64(3),  np.int64(2)],
+                                           index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29',  '2012-11-05', '2012-11-12'])}
 
         expected_frame = pd.DataFrame(expected)
+        expected_frame.index.name = 'week'
+        expected_frame.columns.name = 'swimlane'
 
-        our_jira = JiraWrapper(config=self.jira_config)
+        # We are only test one category here so override the default test config
+        jira_config = copy.copy(self.jira_config)
+        jira_config['categories'] = {'PORTAL': 'project = PORTAL'}
+
+        our_jira = JiraWrapper(config=jira_config)
 
         work = our_jira.issues()
 
@@ -274,9 +312,7 @@ class TestGetMetrics(unittest.TestCase):
                                        types=["value", "failure", "overhead"]
                                        )
 
-        assert False, actual_frame
-
-        # assert expected_frame == actual_frame, actual_frame
+        assert_frame_equal(actual_frame, expected_frame), actual_frame
 
     @skip("Fix once we have moved to new repo...")
     def testGetFailureDemandCreatedOverTime(self):
@@ -418,7 +454,6 @@ class TestGetMetrics(unittest.TestCase):
                                                           mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                           mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-
         expected = {pd.to_datetime('2012-01-01'): pd.Series([START_STATE, START_STATE, START_STATE], index=[0, 1, 2]),
                     pd.to_datetime('2012-01-02'): pd.Series([START_STATE, START_STATE, START_STATE], index=[0, 1, 2]),
                     pd.to_datetime('2012-01-03'): pd.Series([START_STATE, START_STATE, 'pending'], index=[0, 1, 2]),
@@ -435,14 +470,6 @@ class TestGetMetrics(unittest.TestCase):
         actual_frame = work.get_cfd(until_date=date(2012, 1, 8))
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
-
-    def testCreateThroughputReportsForValueAndFailure(self):
-        """
-        In order to be able to graph value throughput in Excel
-        we want just the value data on its own.
-        """
-
-        reports = {'reports': {'throughput': {'types': ['value', 'failure']}}}
 
     def testCreateHistogram(self):
 
