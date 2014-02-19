@@ -277,7 +277,7 @@ class TestGetMetrics(unittest.TestCase):
 
         mock_jira = jira.client.JIRA()
 
-        when(mock_jira).search_issues(contains('='),
+        when(mock_jira).search_issues(any(),
                                       startAt=any(),
                                       maxResults=any()).thenReturn(dummy_issues)
 
@@ -314,26 +314,41 @@ class TestGetMetrics(unittest.TestCase):
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
-    @skip("Fix once we have moved to new repo...")
     def testGetFailureDemandCreatedOverTime(self):
 
         """
         How much failure demand are we creating?  Is it going up or down?
         """
 
-        dummy_issues = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-02'),
-                        MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-08'),
-                        MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect', created='2012-01-09')]
+        unstub()
 
-        expected = {'Portal': pd.Series([np.int64(1),
-                                         np.int64(1)],
-                                         index=['2012-01-01', '2012-01-07'])}
+        dummy_issues = [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2011-12-26'),
+                        MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-02')]
+
+        # We are only test one category here so override the default test config
+        jira_config = copy.copy(self.jira_config)
+        jira_config['categories'] = {'PORTAL': 'project = PORTAL'}
+
+        mock_jira = jira.client.JIRA()
+
+        when(mock_jira).search_issues(any(),
+                                      startAt=any(),
+                                      maxResults=any()).thenReturn(dummy_issues)
+
+        when(jira.client).JIRA(any(), basic_auth=any()).thenReturn(mock_jira)
+
+        expected = {'PORTAL-failure': pd.Series([np.int64(1),
+                                      np.int64(1)],
+                                      index=['2011-12-26', '2012-01-02'])}
 
         expected_frame = pd.DataFrame(expected)
+        expected_frame.index.name = 'week_created'
+        expected_frame.columns.name = 'swimlane'
 
-        our_jira = JiraWrapper(config=self.jira_config)
+        our_jira = JiraWrapper(config=jira_config)
 
         work = our_jira.issues()
+
 
         actual_frame = work.created(cumulative=False,
                                     from_date=date(2012, 01, 01),
