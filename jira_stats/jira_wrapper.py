@@ -187,7 +187,7 @@ class JiraWrapper(object):
         self.done_issues = None
         self.ongoing_issues = None
         self.all_issues = None
-        self.history = None
+        self.issue_history = None
 
     def __str__(self):
         issues_as_string = "Jira Issues\ndone:\n{done}\nongoing:\n{ongoing}". format(done=self.done,
@@ -365,9 +365,9 @@ class JiraWrapper(object):
         df = pd.DataFrame(issue_rows)
         return df
 
-    def get_history(self, from_date=None, until_date=None):
+    def history(self, from_date=None, until_date=None):
 
-        if self.history is None:
+        if self.issue_history is None:
 
             if self.done_issues is None:
                 self.get_done_issues()
@@ -401,9 +401,9 @@ class JiraWrapper(object):
                     print dates
                     print issue_day_history
 
-                self.history = history
+                self.issue_history = history
 
-        df = pd.DataFrame(self.history)
+        df = pd.DataFrame(self.issue_history)
 
         return df
 
@@ -413,11 +413,11 @@ class JiraWrapper(object):
         Cumulative Flow Diagram
         """
 
-        if self.history is None:
+        if self.issue_history is None:
 
-            self.get_history(from_date, until_date)
+            self.history(from_date, until_date)
 
-        cfd = pd.DataFrame(self.history)
+        cfd = pd.DataFrame(self.issue_history)
         
         days = {}
 

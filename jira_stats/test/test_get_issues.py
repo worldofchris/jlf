@@ -427,7 +427,7 @@ class TestGetMetrics(unittest.TestCase):
         our_jira = JiraWrapper(config=self.jira_config)
         expected_frame = pd.DataFrame(expected)
 
-        actual_frame = our_jira.get_history(until_date=date(2012, 1, 8))
+        actual_frame = our_jira.history(until_date=date(2012, 1, 8))
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
