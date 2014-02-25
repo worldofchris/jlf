@@ -10,11 +10,12 @@ import jira.client
 import sys
 
 from datetime import date, timedelta, datetime
-from dateutil import rrule
 
 import pandas as pd
 import numpy as np
 import math
+
+from index import fill_date_index_blanks, week_start_date
 
 """States between which we consider an issue to be being worked on
    for the purposes of calculating cycletime"""
@@ -22,39 +23,6 @@ import math
 START_STATE = 'In Progress'
 END_STATE = 'Customer Approval'
 REOPENED_STATE = 'Reopened'
-
-
-def fill_in_blanks(index):
-
-    index_list = index.tolist()
-
-    start_date = datetime.strptime(index_list[0][:10], '%Y-%m-%d')
-
-    end_date = datetime.strptime(index_list[-1][:10], '%Y-%m-%d')
-
-    num_weeks = rrule.rrule(rrule.WEEKLY,
-                            dtstart=start_date,
-                            until=end_date).count()
-
-    new_index = [week_start_date((start_date + timedelta(weeks=i)).isocalendar()[0],
-                                 (start_date + timedelta(weeks=i)).isocalendar()[1]).strftime('%Y-%m-%d') for i in range(0, num_weeks)]
-
-    return new_index
-
-
-def week_start_date(year, week):
-    """
-    Taken from http://stackoverflow.com/a/1287862/1064619
-    """
-
-    d = date(year, 1, 1)
-    delta_days = d.isoweekday() - 1
-    delta_weeks = week
-    if year == d.isocalendar()[0]:
-        delta_weeks -= 1
-    delta = timedelta(days=-delta_days, weeks=delta_weeks)
-    return d + delta
-
 
 def get_cycle_time(histories,
                    start_state=START_STATE,
@@ -194,68 +162,6 @@ class JiraWrapper(object):
                                                                                      ongoing=self.ongoing)
         return issues_as_string
 
-    def get_issues_from_jira(self, jira, filter=None, filter_by_category=None):
-        """
-        Get the actual issues from Jira itself via the Jira REST API
-        """
-
-        batch_size = 100
-        issues = []
-
-        for category in self.categories:
-
-            # This bit stinks - we are confusing getting the data from Jira with filtering it
-            # _after_ we've got it from Jira.
-            
-            if filter_by_category is not None:
-
-                if category != filter_by_category:
-                    continue
-
-            n = 0
-            while 1:
-
-                jql = self.categories[category]
-                if filter is not None:
-                    jql = jql + filter
-
-                issue_batch = jira.search_issues(jql,
-                                                 startAt=n,
-                                                 maxResults=batch_size,
-                                                 expand='changelog')
-
-                if issue_batch is None:
-                    #TODO: Fix mocking so we can get rid of this.
-                    # 'expand' seems to have some magic meaning in Mockito...
-                    issue_batch = jira.search_issues(jql,
-                                                     startAt=n,
-                                                     maxResults=batch_size)
-
-                for issue in issue_batch:
-
-                    issue.category = category
-                    try:
-                        for cycle in self.cycles:
-                            setattr(issue,
-                                    cycle,
-                                    get_cycle_time(issue.changelog.histories,
-                                                   start_state=self.cycles[cycle]['start'],
-                                                   end_state=self.cycles[cycle]['end'],
-                                                   reopened_state=self.cycles[cycle]['ignore']))
-
-                    except AttributeError:
-                        pass
-
-                    issues.append(issue)
-
-                if len(issue_batch) < batch_size:
-                    break
-                n += batch_size
-                sys.stdout.write('.')
-                sys.stdout.flush()
-
-        return issues
-
     def issues_as_rows(self, issues, types=None):
 
         # TODO: Decide if this should be a class / helper method?
@@ -347,7 +253,7 @@ class JiraWrapper(object):
         """
         if self.ongoing_issues is None:
             filter = 'and (status in ({status_list})) and issuetype in standardIssueTypes()'.format(status_list = ', '.join('"{status}"'.format(status=status) for status in self.ongoing_states))
-            self.ongoing_issues = self.get_issues_from_jira(self.jira, filter=filter)
+            self.ongoing_issues = self._issues_from_jira(filter=filter)
 
         issue_rows = self.issues_as_rows(self.ongoing_issues)
         df = pd.DataFrame(issue_rows)
@@ -359,7 +265,7 @@ class JiraWrapper(object):
         All issues that have been completed
         """
         if self.done_issues is None:
-            self.get_done_issues()
+            self._populate_done_issues_from_jira()
 
         issue_rows = self.issues_as_rows(self.done_issues) 
         df = pd.DataFrame(issue_rows)
@@ -370,7 +276,7 @@ class JiraWrapper(object):
         if self.issue_history is None:
 
             if self.done_issues is None:
-                self.get_done_issues()
+                self._populate_done_issues_from_jira()
 
             history = {}
 
@@ -466,7 +372,7 @@ class JiraWrapper(object):
         """
 
         if self.all_issues is None:
-            self.all_issues = self.get_issues_from_jira(self.jira)
+            self.all_issues = self._issues_from_jira()
 
         issue_rows = self.issues_as_rows(self.all_issues, types)
 
@@ -474,22 +380,8 @@ class JiraWrapper(object):
         df = pd.DataFrame(issue_rows)
         table = pd.tools.pivot.pivot_table(df, rows=['week_created'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
 
-        reindexed = table.reindex(index=fill_in_blanks(table.index), fill_value=np.int64(0))
+        reindexed = table.reindex(index=fill_date_index_blanks(table.index), fill_value=np.int64(0))
         return reindexed
-
-
-    def get_done_issues(self, category=None):
-
-        """
-        We want to exclude subtasks and anything that was not resolved as fixed
-        """
-        counts_towards_throughput = ' AND issuetype in standardIssueTypes() AND resolution = Fixed AND status in (Resolved, Closed)'
-
-        self.done_issues = self.get_issues_from_jira(self.jira,
-                                                     counts_towards_throughput,
-                                                     category)
-
-
 
     def throughput(self,
                    from_date,
@@ -502,7 +394,7 @@ class JiraWrapper(object):
         """
 
         if self.done_issues is None:
-            self.get_done_issues(category=category)
+            self._populate_done_issues_from_jira(category=category)
 
         issue_rows = []
 
@@ -548,7 +440,7 @@ class JiraWrapper(object):
 
             table = pd.tools.pivot.pivot_table(df, rows=['week'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
 
-            reindexed = table.reindex(index=fill_in_blanks(table.index), fill_value=np.int64(0))
+            reindexed = table.reindex(index=fill_date_index_blanks(table.index), fill_value=np.int64(0))
             noncum = reindexed.fillna(0)
             if cumulative:
                 cumtab = noncum.cumsum(axis=0)
@@ -565,3 +457,80 @@ class JiraWrapper(object):
         else:
 
             return None
+
+###############################################################################
+# Internal methods
+###############################################################################
+
+    def _issues_from_jira(self, filter=None, filter_by_category=None):
+        """
+        Get the actual issues from Jira itself via the Jira REST API
+        """
+
+        batch_size = 100
+        issues = []
+
+        for category in self.categories:
+
+            # This bit stinks - we are confusing getting the data from Jira with filtering it
+            # _after_ we've got it from Jira.
+            
+            if filter_by_category is not None:
+
+                if category != filter_by_category:
+                    continue
+
+            n = 0
+            while 1:
+
+                jql = self.categories[category]
+                if filter is not None:
+                    jql = jql + filter
+
+                issue_batch = self.jira.search_issues(jql,
+                                                      startAt=n,
+                                                      maxResults=batch_size,
+                                                      expand='changelog')
+
+                if issue_batch is None:
+                    #TODO: Fix mocking so we can get rid of this.
+                    # 'expand' seems to have some magic meaning in Mockito...
+                    issue_batch = self.jira.search_issues(jql,
+                                                          startAt=n,
+                                                          maxResults=batch_size)
+
+                for issue in issue_batch:
+
+                    issue.category = category
+                    try:
+                        for cycle in self.cycles:
+                            setattr(issue,
+                                    cycle,
+                                    get_cycle_time(issue.changelog.histories,
+                                                   start_state=self.cycles[cycle]['start'],
+                                                   end_state=self.cycles[cycle]['end'],
+                                                   reopened_state=self.cycles[cycle]['ignore']))
+
+                    except AttributeError:
+                        pass
+
+                    issues.append(issue)
+
+                if len(issue_batch) < batch_size:
+                    break
+                n += batch_size
+                sys.stdout.write('.')
+                sys.stdout.flush()
+
+        return issues
+
+    def _populate_done_issues_from_jira(self, category=None):
+
+        """
+        We want to exclude subtasks and anything that was not resolved as fixed
+        """
+        counts_towards_throughput = ' AND issuetype in standardIssueTypes() AND resolution = Fixed AND status in (Resolved, Closed)'
+
+        self.done_issues = self._issues_from_jira(counts_towards_throughput,
+                                                  category)
+

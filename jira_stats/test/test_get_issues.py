@@ -6,12 +6,11 @@ import numpy as np
 
 from datetime import date
 from jira_stats.jira_wrapper import JiraWrapper
-from jira_stats.jira_wrapper import fill_in_blanks, week_start_date
+from jira_stats.index import fill_date_index_blanks, week_start_date
 
 from pandas.util.testing import assert_frame_equal
-from unittest import skip
 
-from mockito import when, any, unstub, contains
+from mockito import when, any, unstub
 from jira_stats.test.jira_mocks import mockHistory, mockItem, START_STATE, END_STATE
 import copy
 
@@ -198,7 +197,7 @@ class TestGetMetrics(unittest.TestCase):
                     'Reports':   pd.Series([np.int64(1), np.int64(2), np.int64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12'])}
 
         expected_frame = pd.DataFrame(expected)
-        actual_index = fill_in_blanks(expected_frame.index)
+        actual_index = fill_date_index_blanks(expected_frame.index)
 
         expected_index = ['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']
 
@@ -212,7 +211,7 @@ class TestGetMetrics(unittest.TestCase):
         expected = {'bi-value': pd.Series([np.int64(1)], index=['2013-12-30'])}
 
         expected_frame = pd.DataFrame(expected)
-        actual_index = fill_in_blanks(expected_frame.index)
+        actual_index = fill_date_index_blanks(expected_frame.index)
 
         expected_index = ['2013-12-30']
 
