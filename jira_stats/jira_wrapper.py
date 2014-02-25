@@ -51,90 +51,6 @@ class JiraWrapper(object):
                                                                                      ongoing=self.ongoing)
         return issues_as_string
 
-    def issues_as_rows(self, issues, types=None):
-
-        # TODO: Decide if this should be a class / helper method?
-        # TODO: See if has any overlap with throughput function
-
-        issue_rows = []
-
-        for issue in issues:
-            f = issue.fields
-
-            resolution_date_str = f.resolutiondate
-
-            if resolution_date_str is not None:
-                resolution_date = datetime.strptime(resolution_date_str[:10],
-                                                    '%Y-%m-%d')
-
-                week = week_start_date(resolution_date.isocalendar()[0],
-                                       resolution_date.isocalendar()[1]).strftime('%Y-%m-%d')
-
-            else:
-
-                week = None
-
-            date_created = datetime.strptime(f.created[:10], '%Y-%m-%d')
-            week_created = week_start_date(date_created.isocalendar()[0],
-                                           date_created.isocalendar()[1]).strftime('%Y-%m-%d')
-
-            if issue.changelog is not None:
-                tis = time_in_states(issue.changelog.histories,
-                                     datetime.strptime(f.created[:10],
-                                                       '%Y-%m-%d'),
-                                                       date.today())
-
-                since = tis[-1]['days']
-
-            else:
-
-                since = None
-
-            include = True
-
-            # TODO: This looks like a bit of a hack.
-            # Can we do without iterating over loop, seeing as we
-            # only ever want one swimlane/category combination?
-
-            swimlane = issue.category
-
-            if types is not None and self.types is not None:
-                include = False
-                for type_grouping in types:
-                    if f.issuetype.name in self.types[type_grouping]:
-                        swimlane = swimlane + '-' + type_grouping
-                        include = True
-
-            if include:
-
-                issue_row = {'swimlane':     swimlane,
-                             'type':         f.issuetype.name,
-                             'id':           issue.key,
-                             'name':         f.summary,
-                             'status':       f.status.name, 
-                             'project':      f.project.name,
-                             'components':   None,
-                             'week':         week,
-                             'since':        since,
-                             'created':      f.created,
-                             'week_created': week_created,
-                             'count':        1}
-
-                for cycle in self.cycles:
-                    try:
-                        issue_row[cycle] = getattr(issue, cycle)
-                    except AttributeError:
-                        pass
-
-                for component in f.components:
-                    if issue_row['components'] is None:
-                        issue_row['components'] = []
-                    issue_row['components'].append(component.name)
-
-                issue_rows.append(issue_row)
-
-        return issue_rows
-
     @property
     def ongoing(self):
         """
@@ -144,7 +60,7 @@ class JiraWrapper(object):
             filter = 'and (status in ({status_list})) and issuetype in standardIssueTypes()'.format(status_list = ', '.join('"{status}"'.format(status=status) for status in self.ongoing_states))
             self.ongoing_issues = self._issues_from_jira(filter=filter)
 
-        issue_rows = self.issues_as_rows(self.ongoing_issues)
+        issue_rows = self._issues_as_rows(self.ongoing_issues)
         df = pd.DataFrame(issue_rows)
         return df
 
@@ -156,7 +72,7 @@ class JiraWrapper(object):
         if self.done_issues is None:
             self._populate_done_issues_from_jira()
 
-        issue_rows = self.issues_as_rows(self.done_issues) 
+        issue_rows = self._issues_as_rows(self.done_issues) 
         df = pd.DataFrame(issue_rows)
         return df
 
@@ -263,7 +179,7 @@ class JiraWrapper(object):
         if self.all_issues is None:
             self.all_issues = self._issues_from_jira()
 
-        issue_rows = self.issues_as_rows(self.all_issues, types)
+        issue_rows = self._issues_as_rows(self.all_issues, types)
 
         # Does ongoing exclude done in its query?
         df = pd.DataFrame(issue_rows)
@@ -423,3 +339,90 @@ class JiraWrapper(object):
         self.done_issues = self._issues_from_jira(counts_towards_throughput,
                                                   category)
 
+    def _issues_as_rows(self, issues, types=None):
+
+        """
+        Get issues into a state where we can stick them into a Pandas dataframe
+        """
+
+        # TODO: Decide if this should be a class / helper method?
+        # TODO: See if has any overlap with throughput function
+
+        issue_rows = []
+
+        for issue in issues:
+            f = issue.fields
+
+            resolution_date_str = f.resolutiondate
+
+            if resolution_date_str is not None:
+                resolution_date = datetime.strptime(resolution_date_str[:10],
+                                                    '%Y-%m-%d')
+
+                week = week_start_date(resolution_date.isocalendar()[0],
+                                       resolution_date.isocalendar()[1]).strftime('%Y-%m-%d')
+
+            else:
+
+                week = None
+
+            date_created = datetime.strptime(f.created[:10], '%Y-%m-%d')
+            week_created = week_start_date(date_created.isocalendar()[0],
+                                           date_created.isocalendar()[1]).strftime('%Y-%m-%d')
+
+            if issue.changelog is not None:
+                tis = time_in_states(issue.changelog.histories,
+                                     datetime.strptime(f.created[:10],
+                                                       '%Y-%m-%d'),
+                                                       date.today())
+
+                since = tis[-1]['days']
+
+            else:
+
+                since = None
+
+            include = True
+
+            # TODO: This looks like a bit of a hack.
+            # Can we do without iterating over loop, seeing as we
+            # only ever want one swimlane/category combination?
+
+            swimlane = issue.category
+
+            if types is not None and self.types is not None:
+                include = False
+                for type_grouping in types:
+                    if f.issuetype.name in self.types[type_grouping]:
+                        swimlane = swimlane + '-' + type_grouping
+                        include = True
+
+            if include:
+
+                issue_row = {'swimlane':     swimlane,
+                             'type':         f.issuetype.name,
+                             'id':           issue.key,
+                             'name':         f.summary,
+                             'status':       f.status.name, 
+                             'project':      f.project.name,
+                             'components':   None,
+                             'week':         week,
+                             'since':        since,
+                             'created':      f.created,
+                             'week_created': week_created,
+                             'count':        1}
+
+                for cycle in self.cycles:
+                    try:
+                        issue_row[cycle] = getattr(issue, cycle)
+                    except AttributeError:
+                        pass
+
+                for component in f.components:
+                    if issue_row['components'] is None:
+                        issue_row['components'] = []
+                    issue_row['components'].append(component.name)
+
+                issue_rows.append(issue_row)
+
+        return issue_rows
