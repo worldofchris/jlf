@@ -341,8 +341,7 @@ class TestGetMetrics(unittest.TestCase):
 
         our_jira = JiraWrapper(config=jira_config)
 
-        actual_frame = our_jira.created(cumulative=False,
-                                        from_date=date(2012, 01, 01),
+        actual_frame = our_jira.created(from_date=date(2012, 01, 01),
                                         to_date=date(2012, 12, 31),
                                         types=["failure"])
 

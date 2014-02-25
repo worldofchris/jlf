@@ -1,6 +1,13 @@
 """
 Wrapper around the JIRA API to allow us to categorize issues by
-project/component/label etc
+project/component/label etc and report on:
+
+- Work in Progress
+- Work completed - including Cycle Time
+- Work history
+- Cumulative Flow
+- Throughput
+- Rate at which types of work are created
 
 Also abstracts away from batch searching and other implementation
 details we don't want to present to the user.
@@ -169,8 +176,6 @@ class JiraWrapper(object):
     def created(self,
                 from_date,
                 to_date,
-                cumulative=True,
-                category=None,
                 types=None):
         """
         Return the number of issues created each week
