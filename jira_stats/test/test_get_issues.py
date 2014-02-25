@@ -472,7 +472,7 @@ class TestGetMetrics(unittest.TestCase):
 
         expected_frame = pd.DataFrame(expected)
 
-        actual_frame = our_jira.get_cfd(until_date=date(2012, 1, 8))
+        actual_frame = our_jira.cfd(until_date=date(2012, 1, 8))
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 

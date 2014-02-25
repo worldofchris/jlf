@@ -408,7 +408,10 @@ class JiraWrapper(object):
         return df
 
 
-    def get_cfd(self, from_date=None, until_date=None):
+    def cfd(self, from_date=None, until_date=None):
+        """
+        Cumulative Flow Diagram
+        """
 
         if self.history is None:
 
@@ -424,7 +427,10 @@ class JiraWrapper(object):
                 tickets.append(ticket)
 
             def state_order(state):
-
+                """
+                Order of states for CFD.
+                TODO: take from config
+                """
                 try:
                     states = ['Open',
                               'Horizon',
