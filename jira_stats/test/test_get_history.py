@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from jira_stats.jira_wrapper import get_cycle_time, get_time_in_states
+from jira_stats.history import cycle_time, time_in_states
 from jira_stats.test.jira_mocks import mockHistory, mockItem, START_STATE, END_STATE, REOPENED_STATE
 
 import unittest
@@ -14,7 +14,7 @@ class TestIssueHistory(unittest.TestCase):
                      mockHistory(u'2012-11-28T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                      mockHistory(u'2012-11-30T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])]
 
-        self.assertEquals(get_cycle_time(histories), 13)
+        self.assertEquals(cycle_time(histories), 13)
 
     def testGetCycleTimeWithDropOuts(self):
 
@@ -22,13 +22,13 @@ class TestIssueHistory(unittest.TestCase):
                      mockHistory(u'2012-11-28T09:54:29.284+0000', [mockItem('status', 'pending', START_STATE)]),
                      mockHistory(u'2012-11-30T09:54:29.284+0000', [mockItem('status', START_STATE, END_STATE)])]
 
-        self.assertEquals(get_cycle_time(histories), 4)
+        self.assertEquals(cycle_time(histories), 4)
 
     def testGetCycleTimeIsStillOpen(self):
 
         histories = [mockHistory(u'2012-11-27T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')])]
 
-        self.assertEquals(get_cycle_time(histories), None)
+        self.assertEquals(cycle_time(histories), None)
 
     def testGetCycleTimeIncRepopenedToClosed(self):
 
@@ -36,7 +36,7 @@ class TestIssueHistory(unittest.TestCase):
                      mockHistory(u'2012-11-30T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)]),
                      mockHistory(u'2013-10-30T09:54:29.284+0000', [mockItem('status', REOPENED_STATE, END_STATE)])]
 
-        self.assertEquals(get_cycle_time(histories), 3)
+        self.assertEquals(cycle_time(histories), 3)
 
     def testGetDaysInStates(self):
 
@@ -52,7 +52,7 @@ class TestIssueHistory(unittest.TestCase):
         created = date(2012, 11, 16)
         today = date(2012, 12, 02)
 
-        actual = get_time_in_states(histories, created, today)
+        actual = time_in_states(histories, created, today)
 
         expected = [{'state': 'queued',
                      'days' : 2},
