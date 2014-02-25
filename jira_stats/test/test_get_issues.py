@@ -180,11 +180,9 @@ class TestGetMetrics(unittest.TestCase):
 
         our_jira = JiraWrapper(config=self.jira_config)
 
-        work = our_jira.issues()
-
-        actual_frame = work.throughput(cumulative=True,
-                                       from_date=date(2012, 01, 01),
-                                       to_date=date(2012, 12, 31))
+        actual_frame = our_jira.throughput(cumulative=True,
+                                           from_date=date(2012, 01, 01),
+                                           to_date=date(2012, 12, 31))
 
 
         assert_frame_equal(actual_frame.astype(np.int64), expected_frame), actual_frame
@@ -302,15 +300,12 @@ class TestGetMetrics(unittest.TestCase):
 
         our_jira = JiraWrapper(config=jira_config)
 
-        work = our_jira.issues()
-
         # We typically are not interested in this data cumulatively as we want to compare how we are split on a week by week basis
 
-        actual_frame = work.throughput(cumulative=False,
-                                       from_date=date(2012, 01, 01),
-                                       to_date=date(2012, 12, 31),
-                                       types=["value", "failure", "overhead"]
-                                       )
+        actual_frame = our_jira.throughput(cumulative=False,
+                                           from_date=date(2012, 01, 01),
+                                           to_date=date(2012, 12, 31),
+                                           types=["value", "failure", "overhead"])
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
@@ -347,13 +342,10 @@ class TestGetMetrics(unittest.TestCase):
 
         our_jira = JiraWrapper(config=jira_config)
 
-        work = our_jira.issues()
-
-
-        actual_frame = work.created(cumulative=False,
-                                    from_date=date(2012, 01, 01),
-                                    to_date=date(2012, 12, 31),
-                                    types=["failure"])
+        actual_frame = our_jira.created(cumulative=False,
+                                        from_date=date(2012, 01, 01),
+                                        to_date=date(2012, 12, 31),
+                                        types=["failure"])
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
@@ -433,10 +425,9 @@ class TestGetMetrics(unittest.TestCase):
                                                           mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
         our_jira = JiraWrapper(config=self.jira_config)
-        work = our_jira.issues()
         expected_frame = pd.DataFrame(expected)
 
-        actual_frame = work.get_history(until_date=date(2012, 1, 8))
+        actual_frame = our_jira.get_history(until_date=date(2012, 1, 8))
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
@@ -478,11 +469,10 @@ class TestGetMetrics(unittest.TestCase):
                     pd.to_datetime('2012-01-07'): pd.Series(['Customer Approval', 'Customer Approval', 'Customer Approval'], index=[0, 1, 2])}
 
         our_jira = JiraWrapper(config=self.jira_config)
-        work = our_jira.issues()
 
         expected_frame = pd.DataFrame(expected)
 
-        actual_frame = work.get_cfd(until_date=date(2012, 1, 8))
+        actual_frame = our_jira.get_cfd(until_date=date(2012, 1, 8))
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 

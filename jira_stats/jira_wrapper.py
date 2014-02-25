@@ -161,18 +161,28 @@ def get_time_in_states(histories, from_date=None, until_date=None):
     return time_in_states
 
 
-class JiraIssues(object):
+class JiraWrapper(object):
     """
-    A set of categorised issues from which we can extract our standard metrics
+    Wrapper around our JIRA instance
     """
 
-    def __init__(self, jira, categories, cycles, types, ongoing):
+    def __init__(self, config):
 
-        self.jira = jira
-        self.categories = categories
-        self.cycles = cycles
-        self.types = types
-        self.ongoing_states = ongoing
+        self.jira = jira.client.JIRA({'server': config['server']},
+                                     basic_auth=(config['username'], config['password']))
+
+        self.categories = None
+        self.cycles = None
+        self.types = None
+        self.ongoing_states = None
+
+        try:
+            self.categories = config['categories']
+            self.cycles = config['cycles']
+            self.types = config['types']
+            self.ongoing_states = config['ongoing']
+        except KeyError:
+            pass
 
         self.done_issues = None
         self.ongoing_issues = None
@@ -549,43 +559,3 @@ class JiraIssues(object):
         else:
 
             return None
-
-
-class JiraWrapper(object):
-    """
-    Wrapper around our JIRA instance
-    """
-
-    def __init__(self, config):
-
-        self.issue_collection = None
-
-        self.jira = jira.client.JIRA({'server': config['server']},
-                                     basic_auth=(config['username'], config['password']))
-
-        self.categories = None
-        self.cycles = None
-        self.types = None
-        self.ongoing = None
-
-        try:
-            self.categories = config['categories']
-            self.cycles = config['cycles']
-            self.types = config['types']
-            self.ongoing_states = config['ongoing']
-        except KeyError:
-            pass
-
-    def issues(self):
-        """
-        Issues for a given set of categories or all if no categories specified
-        """
-
-        if self.issue_collection is None:
-            self.issue_collection = JiraIssues(self.jira,
-                                   self.categories,
-                                   self.cycles,
-                                   self.types,
-                                   self.ongoing_states)
-
-        return self.issue_collection
