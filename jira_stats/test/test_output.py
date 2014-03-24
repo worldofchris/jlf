@@ -10,10 +10,34 @@ Tables and Graphs in Excel for:
 """
 
 import unittest
+import tempfile
+import os
+from subprocess import call
 
 
-class TestGeOutput(unittest.TestCase):
+class TestGetOutput(unittest.TestCase):
 
+    def testSmokeOutCommandLine(self):
+        """
+        Smoke test to ensure we have not broken running from the command line
+        """
+
+        workspace = tempfile.mkdtemp()
+        expected_filename = 'config.xlsx'
+        pwd = os.path.dirname(os.path.abspath(__file__))
+        bin_dir = '../../bin'
+        jlf = os.path.join(pwd, bin_dir, 'jlf')
+        config_file = os.path.join(pwd, bin_dir, 'config.json')
+
+        saved_path = os.getcwd()
+        os.chdir(workspace)
+        call([jlf, '-c', config_file])
+        os.chdir(saved_path)
+
+        actual_output = os.path.join(workspace, expected_filename)
+        self.assertTrue(actual_output)
+
+    @unittest.skip("WIP")
     def testOutputCumulativeThroughputToExcel(self):
 
         # Given this config:

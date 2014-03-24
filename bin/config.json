@@ -11,5 +11,10 @@
     },
     "categories": {
         "All": "(project = 'JLF')"
+    },
+    "types": {
+        "failure": ["Bug"],
+        "value": ["New Feature"],
+        "operational overhead": ["Task"]
     }
 } 
