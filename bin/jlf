@@ -4,14 +4,14 @@ Get forward looking metrics from JIRA
 """
 
 from jira_stats.jira_wrapper import JiraWrapper
-from jira_stats.jira_wrapper import week_start_date
 
 import json
 from datetime import datetime, timedelta
 import argparse
+
+from jira_stats.jira_wrapper import week_start_date
 import os
 import pandas as pd
-
 
 def main():
 
@@ -52,10 +52,11 @@ def main():
 
 
     throughput_frame = our_jira.throughput(cumulative=False,
-                                       from_date=start_date.date(),
-                                       to_date=end_date.date(),
-                                       category=args.swimlane_category,
-                                       types=types)
+                                           from_date=start_date.date(),
+                                           to_date=end_date.date(),
+                                           category=args.swimlane_category,
+                                           types=types)
+
 
     cumulative_value_frame = our_jira.throughput(cumulative=True,
                                        from_date=start_date.date(),
@@ -67,7 +68,6 @@ def main():
     (ignore, config_filename) = os.path.split(args.config_filename)
 
     (excel_basename, ignore) = os.path.splitext(config_filename)
-
 
     excel_filename = os.path.join(os.getcwd(), excel_basename + '.xlsx')
 
@@ -135,6 +135,7 @@ def main():
     #     pass
 
     writer.save()
+
 
 if __name__ == "__main__":
     main()
