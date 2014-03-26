@@ -341,9 +341,9 @@ class TestGetMetrics(unittest.TestCase):
 
         our_jira = JiraWrapper(config=jira_config)
 
-        actual_frame = our_jira.created(from_date=date(2012, 01, 01),
-                                        to_date=date(2012, 12, 31),
-                                        types=["failure"])
+        actual_frame = our_jira.demand(from_date=date(2012, 01, 01),
+                                       to_date=date(2012, 12, 31),
+                                       types=["failure"])
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
@@ -474,3 +474,14 @@ class TestGetMetrics(unittest.TestCase):
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
+
+      # Test get done_value - done_value = our_jira.done[our_jira.done['type'].isin(["New Feature", "Story", "Improvement"])]
+
+
+    @unittest.skip("WIP")
+    def testGetCycleTime(self):
+        """
+        Get Cycle Time as Histogram
+        """        
+        our_jira = JiraWrapper(config=self.jira_config)
+        our_jira.cycle_time()

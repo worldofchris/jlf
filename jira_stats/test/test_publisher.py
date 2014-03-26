@@ -18,6 +18,7 @@ from jira_stats.jira_wrapper import JiraWrapper
 from jira_stats import publisher
 from datetime import date
 import pandas as pd
+import xlrd
 
 def serve_dummy_results(*args, **kwargs):
 
@@ -30,6 +31,9 @@ class TestGetOutput(unittest.TestCase):
           
         self.mock_jira_wrapper = mock.Mock(spec=JiraWrapper)
         self.mock_jira_wrapper.throughput.side_effect = serve_dummy_results
+        self.mock_jira_wrapper.demand.side_effect = serve_dummy_results
+        self.mock_jira_wrapper.done.side_effect = serve_dummy_results
+        self.mock_jira_wrapper.cycle_time = serve_dummy_results        
         
         self.workspace = tempfile.mkdtemp()
 
@@ -38,7 +42,7 @@ class TestGetOutput(unittest.TestCase):
         Smoke test to ensure we have not broken running from the command line
         """
 
-        expected_filename = 'config.xlsx'
+        expected_filename = 'reports.xlsx'
         pwd = os.path.dirname(os.path.abspath(__file__))
         bin_dir = '../../bin'
         jlf = os.path.join(pwd, bin_dir, 'jlf')
@@ -50,6 +54,7 @@ class TestGetOutput(unittest.TestCase):
         os.chdir(saved_path)
 
         actual_output = os.path.join(self.workspace, expected_filename)
+
         self.assertTrue(os.path.isfile(actual_output))
 
     def testOutputThroughputToExcel(self):
@@ -67,12 +72,12 @@ class TestGetOutput(unittest.TestCase):
         # foreach - to report on each category separately
         # combine - to aggregate totals together
 
-        # And this data:
+        # when we publish the metrics for the data in our jira
 
         publisher.publish(report_config,
                           self.mock_jira_wrapper,
                           from_date=date(2012, 10, 8),
-                          to_date=date(2012, 11, 12))        
+                          to_date=date(2012, 11, 12))
 
         # Then we should get an Excel workbook
 
@@ -82,6 +87,116 @@ class TestGetOutput(unittest.TestCase):
         self.assertTrue(os.path.isfile(actual_output), "Spreadsheet not published:{spreadsheet}".format(spreadsheet=actual_output))
 
         # with a sheet containing the throughput data
+
+        workbook = xlrd.open_workbook(actual_output)
+        self.assertEqual('throughput', workbook.sheet_names()[0])
+
+    def testOutputCumulativeThroughputToExcel(self):
+
+        report_config = {'name':     'reports',
+                         'reports':  [{'metric':     'cumulative-throughput',
+                                       'categories': 'foreach',
+                                       'types':      'foreach'}],
+                        'format':   'xlsx',
+                         'location': self.workspace}
+
+        publisher.publish(report_config,
+                          self.mock_jira_wrapper,
+                          from_date=date(2012, 10, 8),
+                          to_date=date(2012, 11, 12))        
+
+
+        expected_filename = 'reports.xlsx'
+        actual_output = os.path.join(self.workspace, expected_filename)
+
+        self.assertTrue(os.path.isfile(actual_output), "Spreadsheet not published:{spreadsheet}".format(spreadsheet=actual_output))
+
+        # with a sheet containing the throughput data
+
+        workbook = xlrd.open_workbook(actual_output)
+        self.assertEqual('cumulative-throughput', workbook.sheet_names()[0])
+
+
+    def testOutputFailureDemandToExcel(self):
+
+        report_config = {'name':     'reports',
+                         'reports':  [{'metric':     'demand',
+                                       'categories': 'foreach',
+                                       'types':      ['failure']}],
+                         'format':   'xlsx',
+                         'location': self.workspace}
+
+        publisher.publish(report_config,
+                          self.mock_jira_wrapper,
+                          from_date=date(2012, 10, 8),
+                          to_date=date(2012, 11, 12))        
+
+
+        expected_filename = 'reports.xlsx'
+        actual_output = os.path.join(self.workspace, expected_filename)
+
+        self.assertTrue(os.path.isfile(actual_output), "Spreadsheet not published:{spreadsheet}".format(spreadsheet=actual_output))
+
+        # with a sheet containing the throughput data
+
+        workbook = xlrd.open_workbook(actual_output)
+        self.assertEqual('failure-demand', workbook.sheet_names()[0])
+
+    def testOutputDoneToExcel(self):
+
+        report_config = {'name':     'reports',
+                         'reports':  [{'metric':     'done',
+                                       'categories': 'foreach',
+                                       'types':      'foreach',
+                                       'sort':       'week-done'}],
+                         'format':   'xlsx',
+                         'location': self.workspace}
+
+        publisher.publish(report_config,
+                          self.mock_jira_wrapper,
+                          from_date=date(2012, 10, 8),
+                          to_date=date(2012, 11, 12))        
+
+
+        expected_filename = 'reports.xlsx'
+        actual_output = os.path.join(self.workspace, expected_filename)
+
+        self.assertTrue(os.path.isfile(actual_output), "Spreadsheet not published:{spreadsheet}".format(spreadsheet=actual_output))
+
+        # with a sheet containing the throughput data
+
+        workbook = xlrd.open_workbook(actual_output)
+        self.assertEqual('done', workbook.sheet_names()[0])
+
+        # and sorted by week-done...
+
+
+    def testOutputCycleTimeToExcel(self):
+
+        report_config = {'name':    'reports',
+                         'reports': [{'metric':     'cycle-time',
+                                       'categories': 'foreach',
+                                       'types':      ['value'],
+                                       'cycles':     ['develop']}],
+                         'format':   'xlsx',
+                         'location': self.workspace}
+
+        publisher.publish(report_config,
+                          self.mock_jira_wrapper,
+                          from_date=date(2012, 10, 8),
+                          to_date=date(2012, 11, 12))        
+
+
+        expected_filename = 'reports.xlsx'
+        actual_output = os.path.join(self.workspace, expected_filename)
+
+        self.assertTrue(os.path.isfile(actual_output), "Spreadsheet not published:{spreadsheet}".format(spreadsheet=actual_output))
+
+        # with a sheet containing the throughput data
+
+        workbook = xlrd.open_workbook(actual_output)
+        self.assertEqual('value-develop-cycle-time', workbook.sheet_names()[0])
+
 
     @unittest.skip('wip')
     def testOutputStandardMetricsToExcel(self):

@@ -71,7 +71,6 @@ class JiraWrapper(object):
         df = pd.DataFrame(issue_rows)
         return df
 
-    @property
     def done(self):
         """
         All issues that have been completed
@@ -173,12 +172,12 @@ class JiraWrapper(object):
 
         return pd.DataFrame(days)
 
-    def created(self,
-                from_date,
-                to_date,
-                types=None):
+    def demand(self,
+               from_date,
+               to_date,
+               types=None):
         """
-        Return the number of issues created each week
+        Return the number of issues created each week - i.e. the demand on the system
         """
 
         if self.all_issues is None:
@@ -267,6 +266,15 @@ class JiraWrapper(object):
         else:
 
             return None
+
+    def cycle_time(self,
+                   from_date,
+                   to_date,
+                   cumulative=True,
+                   category=None,
+                   types=None):
+
+        return None
 
 ###############################################################################
 # Internal methods
