@@ -4,17 +4,61 @@
     "password": "WTFFTW!",
     "cycles": {
         "develop": {
-            "start":  "Open",
-            "end":    "Closed",
-            "ignore": "Reopened" 
+            "start": "Open",
+            "end": "Closed",
+            "ignore": "Reopened"
         }
     },
     "categories": {
         "All": "(project = 'JLF')"
     },
     "types": {
-        "failure": ["Bug"],
-        "value": ["New Feature"],
-        "operational overhead": ["Task"]
-    }
-} 
+        "failure": [
+            "Bug"
+        ],
+        "value": [
+            "New Feature"
+        ],
+        "operational overhead": [
+            "Task"
+        ]
+    },
+    "name": "reports",
+    "reports": [
+        {
+            "metric": "throughput",
+            "categories": "foreach",
+            "types": "foreach"
+        },
+        {
+            "metric": "cumulative-throughput",
+            "categories": "foreach",
+            "types": "foreach"
+        },
+        {
+            "metric": "demand",
+            "categories": "foreach",
+            "types": [
+                "failure"
+            ]
+        },
+        {
+            "metric": "done",
+            "categories": "foreach",
+            "types": "foreach",
+            "sort": "week-done"
+        },
+        {
+            "metric": "cycle-time",
+            "categories": "foreach",
+            "types": [
+                "value"
+            ],
+            "cycles": [
+                "develop"
+            ]
+        }
+    ],
+    "format": "xlsx",
+    "location": "."
+}

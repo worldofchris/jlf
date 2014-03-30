@@ -41,28 +41,7 @@ def main():
     end_date = datetime.now()
     start_date = end_date - timedelta(weeks=args.num_weeks)
 
-    report_config = {'name':     'reports',
-                     'reports':  [{'metric':     'throughput',
-                                   'categories': 'foreach',
-                                   'types':      'foreach'},
-                                  {'metric':     'cumulative-throughput',
-                                   'categories': 'foreach',
-                                   'types':      'foreach'},
-                                  {'metric':     'demand',
-                                   'categories': 'foreach',
-                                   'types':      ['failure']},
-                                  {'metric':     'done',
-                                   'categories': 'foreach',
-                                   'types':      'foreach',
-                                   'sort':       'week-done'},
-                                  {'metric':     'cycle-time',
-                                   'categories': 'foreach',
-                                   'types':      ['value'],
-                                   'cycles':     ['develop']}],
-                     'format':   'xlsx',
-                     'location': os.getcwd()}
-
-    publisher.publish(report_config,
+    publisher.publish(config,
                       our_jira,
                       from_date=start_date.date(),
                       to_date=end_date.date())        
