@@ -478,10 +478,35 @@ class TestGetMetrics(unittest.TestCase):
       # Test get done_value - done_value = our_jira.done[our_jira.done['type'].isin(["New Feature", "Story", "Improvement"])]
 
 
+    @unittest.skip("We need to be able to deal with workflows where there is no queue before work actually starts")
+    def testCycleStartsWithOpen(self):
+        pass
+
+
+    @unittest.skip("Warning Yak Shaving Ahead")
+    def testGetCustomFields(self):
+      # To get custom fields you need to know what they are called
+      # by looking thme up in https://instance/rest/api/2/field
+      # e.g.
+      # {"id":"customfield_10002","name":"Story Points","custom":true,"orderable":true,"navigable":true,"searchable":true,"schema":{"type":"number","custom":"com.atlassian.jira.plugin.system.customfieldtypes:float","customId":10002}},{"id":"customfield_10003","name":"Business Value","custom":true,"orderable":true,"navigable":true,"searchable":true,"schema":{"type":"number","custom":"com.atlassian.jira.plugin.system.customfieldtypes:float","customId":10003}}
+      # These are going to need to be specified in the config file and mapped to their internal Jira names
+      pass
+
+    @unittest.skip("Pass the clippers")
+    def testSpecifyDoneState(self):
+      # Depending on the workflow 'Done' will have a different definition - i.e. is it 'Done', 'Closed', 'Resolved' etc
+      pass
+
+
     @unittest.skip("WIP")
     def testGetCycleTime(self):
         """
         Get Cycle Time as Histogram
-        """        
+        """
+
+        # So we need some issues with start and end dates that fall into different categories
+
+        # How are we grouping things?  In a range? e.g. 1-5, 6-10, 11-20...?
+
         our_jira = JiraWrapper(config=self.jira_config)
         our_jira.cycle_time()

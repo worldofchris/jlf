@@ -48,6 +48,11 @@ class JiraWrapper(object):
         except KeyError:
             pass
 
+        try:
+            self.counts_towards_throughput = config['counts_towards_throughput']
+        except KeyError:
+            self.counts_towards_throughput = ' AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)'
+
         self.done_issues = None
         self.ongoing_issues = None
         self.all_issues = None
@@ -90,6 +95,8 @@ class JiraWrapper(object):
                 self._populate_done_issues_from_jira()
 
             history = {}
+
+            # Do we want history to be about ongoing issues, done issues or both?
 
             for issue in self.done_issues:
 
@@ -149,21 +156,35 @@ class JiraWrapper(object):
                 TODO: take from config
                 """
                 try:
-                    states = ['Open',
+                    states = ['Unknown',
+                              'Open',
+                              'Created',
+                              'Backlog',
                               'Horizon',
+                              'To Do',
                               'Queued',
                               'In Progress',
                               'Blocked',
                               'Awaiting Review',
                               'Peer Review',
                               'pending',
+                              'QA Queue',
+                              'QA review',
+                              'Awaiting Customer Approval',
+                              'Awaiting Customer Review',
                               'Customer Approval',
                               'Ready for Release',
+                              'Done',
+                              'Reopened',
                               'Closed',
-                              'Resolved']
+                              'Resolved',
+                              None]
                     return states.index(state)
                 except ValueError:
                     if type(state) == float:
+                        if math.isnan(state):
+                            return -1
+                    if type(state) == np.float64:
                         if math.isnan(state):
                             return -1
                     raise
@@ -347,9 +368,7 @@ class JiraWrapper(object):
         """
         We want to exclude subtasks and anything that was not resolved as fixed
         """
-        counts_towards_throughput = ' AND issuetype in standardIssueTypes() AND resolution = Fixed AND status in (Resolved, Closed)'
-
-        self.done_issues = self._issues_from_jira(counts_towards_throughput,
+        self.done_issues = self._issues_from_jira(self.counts_towards_throughput,
                                                   category)
 
     def _issues_as_rows(self, issues, types=None):
@@ -412,6 +431,18 @@ class JiraWrapper(object):
 
             if include:
 
+                try:
+                    story_points = f.customfield_10002
+                except AttributeError:
+                    story_points = None
+
+                try: 
+                    epic_link = f.customfield_10200
+                except AttributeError:
+                    epic_link = None
+
+                # TODO: Fields need to come out of config too.
+
                 issue_row = {'swimlane':     swimlane,
                              'type':         f.issuetype.name,
                              'id':           issue.key,
@@ -423,6 +454,8 @@ class JiraWrapper(object):
                              'since':        since,
                              'created':      f.created,
                              'week_created': week_created,
+                             'story_points': story_points,
+                             'epic_link':    epic_link,
                              'count':        1}
 
                 for cycle in self.cycles:
