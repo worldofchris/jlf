@@ -102,30 +102,35 @@ class JiraWrapper(object):
 
                 created_date = datetime.strptime(issue.fields.created[:10], '%Y-%m-%d')
 
-                issue_history = time_in_states(issue.changelog.histories, from_date=created_date, until_date=until_date)
-
-                issue_day_history = []
-                total_days = 0
-
-                for state_days in issue_history:
-                    state = state_days['state']
-                    days = state_days['days']
-
-                    days_in_state = [state] * days
-
-                    issue_day_history += days_in_state
-                    total_days += days
-
-                dates = [ created_date + timedelta(days=x) for x in range(0, total_days) ]
-
                 try:
-                    history[issue.key] = pd.Series(issue_day_history, index=dates)
-                except AssertionError as e:
-                    print e
-                    print dates
-                    print issue_day_history
 
-                self.issue_history = history
+                    issue_history = time_in_states(issue.changelog.histories, from_date=created_date, until_date=until_date)
+
+                    issue_day_history = []
+                    total_days = 0
+
+                    for state_days in issue_history:
+                        state = state_days['state']
+                        days = state_days['days']
+
+                        days_in_state = [state] * days
+
+                        issue_day_history += days_in_state
+                        total_days += days
+
+                    dates = [ created_date + timedelta(days=x) for x in range(0, total_days) ]
+
+                    try:
+                        history[issue.key] = pd.Series(issue_day_history, index=dates)
+                    except AssertionError as e:
+                        print e
+                        print dates
+                        print issue_day_history
+
+                except AttributeError as e:
+                    print e
+
+            self.issue_history = history
 
         df = pd.DataFrame(self.issue_history)
 
@@ -288,12 +293,47 @@ class JiraWrapper(object):
 
             return None
 
+    def arrival_rate(self,
+                     from_date,
+                     to_date):
+        """
+        So that we can get an idea of the flow of work that has not been completed and so does not have a resolution date
+        and so does not count towards throughput, what is the rate at which that work arrived at states further up the 
+        value chain?
+        """
+
+        arrivals = {}
+
+        if self.issue_history is None:
+
+            self.history(from_date, to_date)
+
+        for issue in self.issue_history:
+            history = self.issue_history[issue]
+            for day, state in history.iteritems():
+                if not day in arrivals:
+                    arrivals[day] = {}
+
+                if not state in arrivals[day]:
+                    arrivals[day][state] = 1;
+                else:
+                    arrivals[day][state] += 1;
+
+        df = pd.DataFrame.from_dict(arrivals, orient='index')
+        print df
+
+        return df
+
     def cycle_time(self,
                    from_date,
                    to_date,
                    cumulative=True,
                    category=None,
                    types=None):
+        """
+        Time taken for work to complete one or more 'cycles' - i.e. transitions from a start state to an end state
+        """
+
 
         return None
 

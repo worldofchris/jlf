@@ -112,7 +112,7 @@ class TestGetMetrics(unittest.TestCase):
         'ongoing': ongoing
     }
 
-    # There are three
+    # There are three sets of issues to match the three categories that get searched for in the tests
 
     # Category 1
 
@@ -477,6 +477,31 @@ class TestGetMetrics(unittest.TestCase):
 
       # Test get done_value - done_value = our_jira.done[our_jira.done['type'].isin(["New Feature", "Story", "Improvement"])]
 
+    def testGetArrivalRate(self):
+        """
+        What rate does work transition into a specific state?
+        e.g. arrive at the customer review queue.
+
+        This is to deal with situations where work is not being closed and so does not have a resoultion date and
+        so cannot be counted towards throughput
+        """
+
+        our_jira = JiraWrapper(config=self.jira_config)
+
+        # Set up the dummy issue history to give us our expected arrival rate
+
+        self.dummy_issues_1[0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'QA Queue')]),
+                                                          mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'QA Queue', 'Customer Approval')])])
+
+        expected = {
+            pd.to_datetime('2012-01-01'): {'QA Queue': 1},
+            pd.to_datetime('2012-01-02'): {'Customer Approval': 1}
+        }
+
+        expected_frame = pd.DataFrame.from_dict(expected, orient='index') 
+        actual_frame = our_jira.arrival_rate(date(2012,1,1), date(2012,1,3))
+
+        assert_frame_equal(actual_frame, expected_frame), actual_frame
 
     @unittest.skip("We need to be able to deal with workflows where there is no queue before work actually starts")
     def testCycleStartsWithOpen(self):

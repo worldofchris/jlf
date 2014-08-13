@@ -27,6 +27,11 @@
 
 	    nosetests
 
+* To run a single test, specify the path to the module, the Test Case Class Name and the test Case Name.  e.g.
+
+		nosetests jira_stats.test.test_get_issues:TestGetMetrics.testGetArrivalRate
+
+
 	
 
 
