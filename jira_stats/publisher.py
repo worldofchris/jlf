@@ -23,12 +23,18 @@ def publish(config, jira, from_date, to_date):
 
         data = None
 
-        types = report['types']
-        if types == 'foreach':
-            types = []
-            for type in config['types']:
-                types.append(type)
- 
+        types = None
+
+        try:
+            types = report['types']
+            if types == 'foreach':
+                types = []
+                for type in config['types']:
+                    types.append(type)
+        except KeyError:
+            # Not all reports require types
+            pass
+
         if report['metric'] == 'throughput':
 
             data = jira.throughput(from_date,
@@ -51,14 +57,17 @@ def publish(config, jira, from_date, to_date):
         if report['metric'] == 'cycle-time':
             data = jira.cycle_time(from_date, to_date, report['types'], report['cycles'])
 
+        if report['metric'] == 'arrival-rate':
+            data = jira.arrival_rate(from_date, to_date)
+
         if data is not None:
             if isinstance(writer, pd.ExcelWriter):
 
                 sheet_name = []
-                if isinstance(report['types'], list):
-                    sheet_name.extend(report['types'])
-
                 try:
+                    if isinstance(report['types'], list):
+                        sheet_name.extend(report['types'])
+
                     if isinstance(report['cycles'], list):
                         sheet_name.extend(report['cycles'])
 

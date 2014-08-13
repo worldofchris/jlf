@@ -52,7 +52,8 @@ class TestGetOutput(unittest.TestCase):
         self.mock_jira_wrapper.throughput.side_effect = serve_dummy_throughput
         self.mock_jira_wrapper.demand.side_effect = serve_dummy_results
         self.mock_jira_wrapper.done.side_effect = serve_dummy_results
-        self.mock_jira_wrapper.cycle_time = serve_dummy_results        
+        self.mock_jira_wrapper.cycle_time = serve_dummy_results
+        self.mock_jira_wrapper.arrival_rate = serve_dummy_results
         
         self.workspace = tempfile.mkdtemp()
 
@@ -294,3 +295,29 @@ class TestGetOutput(unittest.TestCase):
 
         for cell in header_row[1:]:
             self.assertEqual(cell.value, expected_headers[header_row[1:].index(cell)])
+
+
+    def testOutputArrivalRateToExcel(self):
+
+        report_config = {'name':     'reports',
+                         'reports':  [{'metric':     'arrival-rate'}],
+                         'format':   'xlsx',
+                         'location': self.workspace}
+
+        publisher.publish(report_config,
+                          self.mock_jira_wrapper,
+                          from_date=date(2012, 10, 8),
+                          to_date=date(2012, 11, 12))
+
+        expected_filename = 'reports.xlsx'
+        actual_output = os.path.join(self.workspace, expected_filename)
+
+        self.assertTrue(os.path.isfile(actual_output), "Spreadsheet not published:{spreadsheet}".format(spreadsheet=actual_output))
+
+        workbook = xlrd.open_workbook(actual_output)
+
+        expected_sheet_name = 'arrival-rate'
+        self.assertEqual(expected_sheet_name, workbook.sheet_names()[0])
+        worksheet = workbook.sheet_by_name(expected_sheet_name)
+        header_row = worksheet.row(0)
+        expected_headers = ['one', 'two', 'three']      
