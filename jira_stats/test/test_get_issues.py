@@ -186,6 +186,56 @@ class TestGetMetrics(unittest.TestCase):
 
         assert_frame_equal(actual_frame.astype(np.int64), expected_frame), actual_frame
 
+    def testGetThroughputMultipleCategories(self):
+        """
+        The Cumulative Throughput Table is what we use to create the graph in
+        Excel
+        """
+
+        our_jira = JiraWrapper(config=self.jira_config)
+
+        expected_1 = {'Ops Tools': pd.Series([np.int64(1),
+                                            np.int64(1),
+                                            np.int64(1),
+                                            np.int64(1),
+                                            np.int64(2),
+                                            np.int64(3)],
+                                            index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
+
+        expected_frame_1 = pd.DataFrame(expected_1)
+
+        expected_frame_1.index.name = 'week'
+        expected_frame_1.columns.name = 'swimlane'
+
+        actual_frame_1 = our_jira.throughput(cumulative=True,
+                                             from_date=date(2012, 01, 01),
+                                             to_date=date(2012, 12, 31),
+                                             category="Ops Tools")
+
+        assert_frame_equal(actual_frame_1.astype(np.int64), expected_frame_1), actual_frame_1
+
+        expected_2 = {'Portal':    pd.Series([np.int64(1),
+                                              np.int64(1),
+                                              np.int64(1),
+                                              np.int64(1),
+                                              np.int64(2),
+                                              np.int64(3)],
+                                              index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
+
+        expected_frame_2 = pd.DataFrame(expected_2)
+
+        expected_frame_2.index.name = 'week'
+        expected_frame_2.columns.name = 'swimlane'
+
+        actual_frame_2 = our_jira.throughput(cumulative=True,
+                                             from_date=date(2012, 01, 01),
+                                             to_date=date(2012, 12, 31),
+                                             category="Portal")
+
+        print actual_frame_2, expected_frame_2
+
+        assert_frame_equal(actual_frame_2.astype(np.int64), expected_frame_2), actual_frame_2
+
     def testFillInTheBlanks(self):
         """
         If we didn't complete any work in a given week then we will have a missing row in our data frame.
@@ -490,18 +540,26 @@ class TestGetMetrics(unittest.TestCase):
 
         # Set up the dummy issue history to give us our expected arrival rate
 
+        for dummy_issue in self.dummy_issues_1:
+            dummy_issue.changelog = None
+
+        for dummy_issue in self.dummy_issues_2:
+            dummy_issue.changelog = None
+
+        for dummy_issue in self.dummy_issues_3:
+            dummy_issue.changelog = None
+
         self.dummy_issues_1[0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'QA Queue')]),
                                                           mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'QA Queue', 'Customer Approval')])])
 
         expected = {
-            pd.to_datetime('2012-01-01'): {'QA Queue': 1},
-            pd.to_datetime('2012-01-02'): {'Customer Approval': 1}
+            pd.to_datetime('2012-01-02'): {'QA Queue': np.int64(1), 'Customer Approval': np.int64(1)}
         }
 
-        expected_frame = pd.DataFrame.from_dict(expected, orient='index') 
-        actual_frame = our_jira.arrival_rate(date(2012,1,1), date(2012,1,3))
+        expected_frame = pd.DataFrame.from_dict(expected, orient='index').sort_index(axis=1)
+        actual_frame = our_jira.arrival_rate(date(2012,1,1), date(2012,1,3)).sort_index(axis=1)
 
-        assert_frame_equal(actual_frame, expected_frame), actual_frame
+        assert_frame_equal(actual_frame.astype(np.int64), expected_frame), actual_frame
 
     @unittest.skip("We need to be able to deal with workflows where there is no queue before work actually starts")
     def testCycleStartsWithOpen(self):

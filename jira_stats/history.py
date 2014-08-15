@@ -59,6 +59,10 @@ def cycle_time(histories,
     return ((end_date - start_date).days) + 1
 
 
+def extract_date(created):
+    return datetime.strptime(created[:10], '%Y-%m-%d').date()
+
+
 def time_in_states(histories, from_date=None, until_date=None):
     """
     How long did an issue spend in each state in its history.
@@ -86,8 +90,7 @@ def time_in_states(histories, from_date=None, until_date=None):
         for item in history.items:
             if item.field == 'status':
 
-                state_change_date = datetime.strptime(history.created[:10],
-                                                      '%Y-%m-%d').date()
+                state_change_date = extract_date(history.created)
 
                 days_in_state = state_change_date - prev_state_change_date
 
@@ -110,3 +113,24 @@ def time_in_states(histories, from_date=None, until_date=None):
                                'days':  1})
 
     return time_in_states
+
+def arrivals(histories, add_to=None):
+
+    if add_to is None:
+        arrivals = {}
+    else:
+        arrivals = add_to
+
+    for history in histories:
+        day = extract_date(history.created)
+        if not day in arrivals:
+            arrivals[day] = {}
+
+        for item in history.items:
+            if item.field == 'status':
+                if not item.toString in arrivals[day]:
+                    arrivals[day][item.toString] = 1
+                else:
+                    arrivals[day][item.toString] += 1
+
+    return arrivals

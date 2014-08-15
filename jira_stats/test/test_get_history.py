@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from jira_stats.history import cycle_time, time_in_states
+from jira_stats.history import cycle_time, time_in_states, arrivals
 from jira_stats.test.jira_mocks import mockHistory, mockItem, START_STATE, END_STATE, REOPENED_STATE
 
 import unittest
@@ -39,7 +39,6 @@ class TestIssueHistory(unittest.TestCase):
         self.assertEquals(cycle_time(histories), 3)
 
     def testGetDaysInStates(self):
-
         """
         Work is getting stuck in CA for ages.  We want to see for how long.
         To start with we'll just find out how long has something been in its current state
@@ -65,3 +64,26 @@ class TestIssueHistory(unittest.TestCase):
 
         assert actual == expected, actual
 
+    def testGetArrivals(self):
+        """
+        In order to work out the arrival rate we need to be able to get the days a ticket arrived
+        in each of the states in its history.
+        """
+
+        histories = [mockHistory(u'2012-11-18T09:54:29.284+0000', [mockItem('status', 'start', 'QA Queue')]),
+                     mockHistory(u'2012-11-18T09:54:29.284+0000', [mockItem('status', 'QA Queue', 'Customer Queue')]),
+                     mockHistory(u'2012-11-22T09:54:29.284+0000', [mockItem('status', 'Customer Queue', 'Customer Review')])]
+
+        expected = {date(2012, 11, 18): {'QA Queue': 1, 'Customer Queue': 1},
+                    date(2012, 11, 22): {'Customer Review': 1}}
+
+        actual = arrivals(histories)
+
+        self.assertEquals(actual, expected)
+
+        actual = arrivals(histories, actual)
+
+        expected_twice = {date(2012, 11, 18): {'QA Queue': 2, 'Customer Queue': 2},
+                          date(2012, 11, 22): {'Customer Review': 2}}
+
+        self.assertEquals(actual, expected_twice)

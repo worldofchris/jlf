@@ -23,7 +23,9 @@ import numpy as np
 import math
 
 from index import fill_date_index_blanks, week_start_date
-from history import time_in_states, cycle_time
+from history import time_in_states, cycle_time, arrivals
+
+from collections import Counter
 
 class JiraWrapper(object):
     """
@@ -69,8 +71,7 @@ class JiraWrapper(object):
         All issues that are still in flight
         """
         if self.ongoing_issues is None:
-            filter = 'and (status in ({status_list})) and issuetype in standardIssueTypes()'.format(status_list = ', '.join('"{status}"'.format(status=status) for status in self.ongoing_states))
-            self.ongoing_issues = self._issues_from_jira(filter=filter)
+            self._populate_ongoing_issues_from_jira()
 
         issue_rows = self._issues_as_rows(self.ongoing_issues)
         df = pd.DataFrame(issue_rows)
@@ -91,14 +92,12 @@ class JiraWrapper(object):
 
         if self.issue_history is None:
 
-            if self.done_issues is None:
-                self._populate_done_issues_from_jira()
+            if self.all_issues is None:
+                self.all_issues = self._issues_from_jira()
 
             history = {}
 
-            # Do we want history to be about ongoing issues, done issues or both?
-
-            for issue in self.done_issues:
+            for issue in self.all_issues:
 
                 created_date = datetime.strptime(issue.fields.created[:10], '%Y-%m-%d')
 
@@ -229,11 +228,14 @@ class JiraWrapper(object):
         """
 
         if self.done_issues is None:
-            self._populate_done_issues_from_jira(category=category)
+            self._populate_done_issues_from_jira()
 
         issue_rows = []
 
         for issue in self.done_issues:
+            if category is not None:
+                if category != issue.category:
+                    continue
             f = issue.fields
 
             resolution_date_str = f.resolutiondate
@@ -302,27 +304,23 @@ class JiraWrapper(object):
         value chain?
         """
 
-        arrivals = {}
+        if self.all_issues is None:
+            self.all_issues = self._issues_from_jira()
+ 
+        arrivals_count = {}
 
-        if self.issue_history is None:
+        for issue in self.all_issues:
+            try:
+                arrivals_count = arrivals(issue.changelog.histories, arrivals_count)
+            except AttributeError:
+                pass
 
-            self.history(from_date, to_date)
+        df = pd.DataFrame.from_dict(arrivals_count, orient='index')
+        df.index = pd.to_datetime(df.index)
+        wf = df.resample('W-MON', how='sum')
 
-        for issue in self.issue_history:
-            history = self.issue_history[issue]
-            for day, state in history.iteritems():
-                if not day in arrivals:
-                    arrivals[day] = {}
+        return wf
 
-                if not state in arrivals[day]:
-                    arrivals[day][state] = 1;
-                else:
-                    arrivals[day][state] += 1;
-
-        df = pd.DataFrame.from_dict(arrivals, orient='index')
-        print df
-
-        return df
 
     def cycle_time(self,
                    from_date,
@@ -341,7 +339,7 @@ class JiraWrapper(object):
 # Internal methods
 ###############################################################################
 
-    def _issues_from_jira(self, filter=None, filter_by_category=None):
+    def _issues_from_jira(self, filter=None):
         """
         Get the actual issues from Jira itself via the Jira REST API
         """
@@ -350,14 +348,6 @@ class JiraWrapper(object):
         issues = []
 
         for category in self.categories:
-
-            # This bit stinks - we are confusing getting the data from Jira with filtering it
-            # _after_ we've got it from Jira.
-            
-            if filter_by_category is not None:
-
-                if category != filter_by_category:
-                    continue
 
             n = 0
             while 1:
@@ -403,13 +393,16 @@ class JiraWrapper(object):
 
         return issues
 
-    def _populate_done_issues_from_jira(self, category=None):
+    def _populate_ongoing_issues_from_jira(self):
+        filter = 'and (status in ({status_list})) and issuetype in standardIssueTypes()'.format(status_list = ', '.join('"{status}"'.format(status=status) for status in self.ongoing_states))
+        self.ongoing_issues = self._issues_from_jira(filter=filter)
+
+    def _populate_done_issues_from_jira(self):
 
         """
         We want to exclude subtasks and anything that was not resolved as fixed
         """
-        self.done_issues = self._issues_from_jira(self.counts_towards_throughput,
-                                                  category)
+        self.done_issues = self._issues_from_jira(filter=self.counts_towards_throughput)
 
     def _issues_as_rows(self, issues, types=None):
 
