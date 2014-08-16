@@ -108,7 +108,40 @@ The metrics to be included are then specified in:
 	    
 The following metrics are available and can be configured as described below:
 
+#### Demand
+
+What sort of work are we being asked to do?  How much of it is to add value?  How much of it is dealing with defects or problems in the system?  How much of it is operational overhead?
+
+This metric allows you to produce graphs like this one:
+
+![image](public/assets/demand.png)
+
+This project is generating around four defects a week!
+
+        {
+            "metric": "demand",
+            "categories": "foreach",
+            "types": [
+                "failure", "value", "oo"
+            ]
+        },
+
+
 #### Done
+
+What work have we completed and how long did it take to complete?
+
+The *Done* report lists all the work that has been completed along with the cycle times for that work.
+
+This report is used to create simple bar chart control charts:
+
+![image](public/assets/done.png) 
+
+Here you can see the cycle time for getting as far as being ready for customer review and the cycle time for actually getting to deployment.
+
+On this project the team were pretty good at working with the customer to get work reviewed and deployed as soon after development as possible.  There were as you can see some notable exceptions.
+
+See Section 12.3 of Henrik Kniberg's *Lean from the Trenches* for some great examples and insights on using bar graphs as control charts.
 
         {
             "metric": "done",
@@ -118,6 +151,14 @@ The following metrics are available and can be configured as described below:
         },
 
 #### Throughput
+
+How much work do we complete each week?
+
+This report is used to create a bar chart showing how much of throughput is devoted to different types of work:
+
+![image](public/assets/throughput.png)
+
+On this project you can see the amount of throughput dedicated to addressing failure demand start to increase as the weeks go by.  The more time spent fixing defects, the less can be spent adding new features.
 
         {
             "metric": "throughput",
@@ -129,6 +170,8 @@ The following metrics are available and can be configured as described below:
   
 #### Cumulative Throughput
 
+![image](public/assets/cumulative-throughput.png)
+
         {
             "metric": "cumulative-throughput",
             "categories": "foreach",
@@ -137,6 +180,8 @@ The following metrics are available and can be configured as described below:
 
 #### Cumulative Flow
 
+
+
         {
             "metric": "cfd",
             "types": "foreach"
@@ -144,20 +189,18 @@ The following metrics are available and can be configured as described below:
 
 #### Issue History
 
+Issue History is based on Benjamin Mitchell's blog post on [item history tracking](http://blog.benjaminm.net/2012/06/26/how-to-study-the-flow-or-work-with-kanban-cards).
+
+I find it useful for showing specific examples of work that has spent a long time waiting to be worked on, or has come back round through the development cycle several times:
+
+![image](public/assets/issue-history.png)
+        
+
         {
             "metric": "history",
             "types": "foreach"
         },
 
-#### Demand
-
-        {
-            "metric": "demand",
-            "categories": "foreach",
-            "types": [
-                "failure", "value", "oo"
-            ]
-        },
 
 ## Use
 
