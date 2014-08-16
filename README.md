@@ -170,7 +170,13 @@ On this project you can see the amount of throughput dedicated to addressing fai
   
 #### Cumulative Throughput
 
+This is a simpler view than Cumulative Flow and is particularly useful if you want to compare a number of concurrent projects or workstreams:
+
 ![image](public/assets/cumulative-throughput.png)
+
+In this graph we see a number of concurrent projects, several of which are flatlining because the team simply have too many projects in flight at once!
+
+Chapter 12 of Henrik Kniberg's *Lean from the Trenches* is very good on using cumulative throughput, or velocity as he calls it, as a feedback mechanism for managing work.
 
         {
             "metric": "cumulative-throughput",
@@ -180,7 +186,11 @@ On this project you can see the amount of throughput dedicated to addressing fai
 
 #### Cumulative Flow
 
+You can make some pretty big Cumulative Flow Diagrams:
 
+![image](public/assets/long-cfd.jpg)
+
+The 'colouring in' of this one was done using a bit of [VBA](https://gist.github.com/worldofchris/c1652352f55619c0420f).
 
         {
             "metric": "cfd",
