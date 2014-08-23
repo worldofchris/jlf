@@ -17,8 +17,16 @@ It is intended to complement the existing [kanban reporting](https://confluence.
 
 ## Installation
 
+### Dependencies
+
+* Python - tested with 2.7
+* Recommened but not essential: Python [virtualenv](https://pypi.python.org/pypi/virtualenv)
+* Access to a JIRA instance
+
+### Install Steps
+
 * Clone this repo
-* Create a virtual environment e.g.
+* Recommened but not essential: Create and activate a Python virtual environment e.g.
 
         virtualenv jlf
         source jlf/bin/activate
