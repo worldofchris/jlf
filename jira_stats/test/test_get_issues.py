@@ -7,6 +7,7 @@ import numpy as np
 from datetime import date
 from jira_stats.jira_wrapper import JiraWrapper
 from jira_stats.index import fill_date_index_blanks, week_start_date
+from jira_stats.bucket import bucket_labels
 
 from pandas.util.testing import assert_frame_equal
 
@@ -568,28 +569,126 @@ class TestGetMetrics(unittest.TestCase):
 
     @unittest.skip("Warning Yak Shaving Ahead")
     def testGetCustomFields(self):
-      # To get custom fields you need to know what they are called
-      # by looking thme up in https://instance/rest/api/2/field
-      # e.g.
-      # {"id":"customfield_10002","name":"Story Points","custom":true,"orderable":true,"navigable":true,"searchable":true,"schema":{"type":"number","custom":"com.atlassian.jira.plugin.system.customfieldtypes:float","customId":10002}},{"id":"customfield_10003","name":"Business Value","custom":true,"orderable":true,"navigable":true,"searchable":true,"schema":{"type":"number","custom":"com.atlassian.jira.plugin.system.customfieldtypes:float","customId":10003}}
-      # These are going to need to be specified in the config file and mapped to their internal Jira names
-      pass
+        # To get custom fields you need to know what they are called
+        # by looking thme up in https://instance/rest/api/2/field
+        # e.g.
+        # {"id":"customfield_10002","name":"Story Points","custom":true,"orderable":true,"navigable":true,"searchable":true,"schema":{"type":"number","custom":"com.atlassian.jira.plugin.system.customfieldtypes:float","customId":10002}},{"id":"customfield_10003","name":"Business Value","custom":true,"orderable":true,"navigable":true,"searchable":true,"schema":{"type":"number","custom":"com.atlassian.jira.plugin.system.customfieldtypes:float","customId":10003}}
+        # These are going to need to be specified in the config file and mapped to their internal Jira names
+        pass
 
     @unittest.skip("Pass the clippers")
     def testSpecifyDoneState(self):
-      # Depending on the workflow 'Done' will have a different definition - i.e. is it 'Done', 'Closed', 'Resolved' etc
-      pass
+        # Depending on the workflow 'Done' will have a different definition - i.e. is it 'Done', 'Closed', 'Resolved' etc
+        pass
 
-
-    @unittest.skip("WIP")
-    def testGetCycleTime(self):
+    def testGetSingleCycleAsHistogram(self):
         """
-        Get Cycle Time as Histogram
+        Get Cycle Time as Histogram for a single cycle
         """
 
-        # So we need some issues with start and end dates that fall into different categories
+        # We need some issues with start and end dates that fall into different buckets
+        # TODO: Refactor this to remove duplication in other tests
 
-        # How are we grouping things?  In a range? e.g. 1-5, 6-10, 11-20...?
+        for dummy_issue in self.dummy_issues_1:
+            dummy_issue.changelog = None
+
+        for dummy_issue in self.dummy_issues_2:
+            dummy_issue.changelog = None
+
+        for dummy_issue in self.dummy_issues_3:
+            dummy_issue.changelog = None
+
+        # 0-5
+
+        self.dummy_issues_1[0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                          mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+
+
+        self.dummy_issues_1[1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                          mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+
+        # 6-10
+
+        self.dummy_issues_1[2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                          mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+
+        self.dummy_issues_2[0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                          mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+
+        self.dummy_issues_2[1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                          mockHistory(u'2012-01-08T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+
+        self.dummy_issues_2[2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                          mockHistory(u'2012-01-09T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+
+        self.dummy_issues_3[0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                          mockHistory(u'2012-01-09T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+
+        self.dummy_issues_3[1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                          mockHistory(u'2012-01-10T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+
+
+        # 11-20
+
+        self.dummy_issues_3[2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                          mockHistory(u'2012-01-15T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+
 
         our_jira = JiraWrapper(config=self.jira_config)
-        our_jira.cycle_time()
+        actual_frame = our_jira.cycle_time_histogram(cycle='develop', buckets=[0, 6, 11, 'max'])
+
+        expected = [
+            {'bucket': '0-5',   'develop': 2},
+            {'bucket': '6-10',  'develop': 6},
+            {'bucket': '11-15', 'develop': 1}
+        ]
+
+        expected_frame = pd.DataFrame(expected).set_index('bucket')
+
+        assert_frame_equal(actual_frame, expected_frame), actual_frame
+
+    def testCycleTimeHistogramsWithNones(self):
+        """
+        Deal with cycle time data containing Nones - i.e. work item has not gone through cycle we are reporting on
+        """
+
+        for dummy_issue in self.dummy_issues_1:
+            dummy_issue.changelog = None
+
+        for dummy_issue in self.dummy_issues_2:
+            dummy_issue.changelog = None
+
+        for dummy_issue in self.dummy_issues_3:
+            dummy_issue.changelog = None
+
+        # 0-5
+
+        self.dummy_issues_1[0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                          mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+
+
+        self.dummy_issues_1[1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                          mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', 'In Progress', 'pending')])])
+
+        our_jira = JiraWrapper(config=self.jira_config)
+        actual_frame = our_jira.cycle_time_histogram(cycle='develop', buckets=[0,2,4])
+
+        expected = [
+            {'bucket': '0-1',  'develop': 0},
+            {'bucket': '2-4',  'develop': 1}
+        ]
+
+        expected_frame = pd.DataFrame(expected).set_index('bucket')
+
+        assert_frame_equal(actual_frame, expected_frame), actual_frame
+
+    def testMakeHistogramBucketLabels(self):
+        """
+        Make histogram bucket labels based on the bin edges used
+        """
+
+        expected = ['0-5', '6-10', '11-20']
+
+        actual = bucket_labels([0, 6, 11, 20])
+
+        self.assertEqual(actual, expected)

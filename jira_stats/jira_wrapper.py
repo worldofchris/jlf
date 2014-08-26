@@ -24,6 +24,7 @@ import math
 
 from index import fill_date_index_blanks, week_start_date
 from history import time_in_states, cycle_time, arrivals
+from bucket import bucket_labels
 
 from collections import Counter
 
@@ -322,18 +323,47 @@ class JiraWrapper(object):
         return wf
 
 
-    def cycle_time(self,
-                   from_date,
-                   to_date,
-                   cumulative=True,
-                   category=None,
-                   types=None):
+    def cycle_time_histogram(self,
+                             cycle,
+                             buckets=None):
         """
         Time taken for work to complete one or more 'cycles' - i.e. transitions from a start state to an end state
         """
 
+        if self.all_issues is None:
+            self.all_issues = self._issues_from_jira()
 
-        return None
+        rows = self._issues_as_rows(self.all_issues)
+
+        cycle_time_data = []
+
+        for row in rows:
+            try:
+                if row[cycle] is not None:
+                    cycle_time_data.append(row[cycle])
+            except KeyError:
+                continue
+
+        if buckets is not None:
+
+            try:
+                li = buckets.index('max')
+                buckets[li] = max(cycle_time_data)
+
+            except ValueError:
+                pass
+
+            labels = bucket_labels(buckets)
+            count, division = np.histogram(cycle_time_data, bins=buckets)
+        else:
+
+            count, division = np.histogram(cycle_time_data)
+            labels = bucket_labels(division)
+
+        histogram = pd.DataFrame(count, index=labels, columns=[cycle])
+        histogram.index.name = 'bucket'
+
+        return histogram
 
 ###############################################################################
 # Internal methods
@@ -381,6 +411,7 @@ class JiraWrapper(object):
                                                reopened_state=self.cycles[cycle]['ignore']))
 
                     except AttributeError:
+
                         pass
 
                     issues.append(issue)

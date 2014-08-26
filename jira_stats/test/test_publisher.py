@@ -52,8 +52,8 @@ class TestGetOutput(unittest.TestCase):
         self.mock_jira_wrapper.throughput.side_effect = serve_dummy_throughput
         self.mock_jira_wrapper.demand.side_effect = serve_dummy_results
         self.mock_jira_wrapper.done.side_effect = serve_dummy_results
-        self.mock_jira_wrapper.cycle_time = serve_dummy_results
-        self.mock_jira_wrapper.arrival_rate = serve_dummy_results
+        self.mock_jira_wrapper.cycle_time_histogram.side_effect = serve_dummy_results
+        self.mock_jira_wrapper.arrival_rate.side_effect = serve_dummy_results
         
         self.workspace = tempfile.mkdtemp()
 
@@ -218,9 +218,9 @@ class TestGetOutput(unittest.TestCase):
 
         report_config = {'name':    'reports',
                          'reports': [{'metric':     'cycle-time',
-                                       'categories': 'foreach',
-                                       'types':      ['value'],
-                                       'cycles':     ['develop']}],
+                                      'categories': 'foreach',
+                                      'types':      ['value'],
+                                      'cycles':     ['develop']}],
                          'format':   'xlsx',
                          'location': self.workspace}
 
