@@ -168,16 +168,24 @@ class JiraWrapper(object):
                               'Horizon',
                               'To Do',
                               'Queued',
+                              'Dev Backlog',
+                              'Sprint Backlog',
                               'In Progress',
                               'Blocked',
                               'Awaiting Review',
+                              'PR Queue',
                               'Peer Review',
+                              'PR Review',
                               'pending',
+                              'Dev Complete',
+                              'On Hold',
                               'QA Queue',
                               'QA review',
                               'Awaiting Customer Approval',
                               'Awaiting Customer Review',
+                              'Customer Queue',
                               'Customer Approval',
+                              'Customer Review',
                               'Ready for Release',
                               'Done',
                               'Reopened',
@@ -325,6 +333,7 @@ class JiraWrapper(object):
 
     def cycle_time_histogram(self,
                              cycle,
+                             types=None,
                              buckets=None):
         """
         Time taken for work to complete one or more 'cycles' - i.e. transitions from a start state to an end state
@@ -335,33 +344,63 @@ class JiraWrapper(object):
 
         rows = self._issues_as_rows(self.all_issues)
 
-        cycle_time_data = []
+        cycle_time_data = {}
 
         for row in rows:
+
+            if types is not None:
+
+                include = False
+
+                for type_grouping in types:
+
+                    if row['type'] in self.types[type_grouping]:
+                        include = True
+                        key = "{0}-{1}".format(type_grouping, cycle)
+                        break
+
+                if not include:
+                    continue 
+
+            else:
+                key = cycle
+
             try:
                 if row[cycle] is not None:
-                    cycle_time_data.append(row[cycle])
+                    if key not in cycle_time_data:
+                        cycle_time_data[key] = [row[cycle]]
+                    else:
+                        cycle_time_data[key].append(row[cycle])
             except KeyError:
                 continue
 
-        if buckets is not None:
+        histogram = None
 
-            try:
-                li = buckets.index('max')
-                buckets[li] = max(cycle_time_data)
+        for cycle in cycle_time_data:
+            if buckets is not None:
 
-            except ValueError:
-                pass
+                try:
+                    li = buckets.index('max')
+                    buckets[li] = max(cycle_time_data[cycle])
 
-            labels = bucket_labels(buckets)
-            count, division = np.histogram(cycle_time_data, bins=buckets)
-        else:
+                except ValueError:
+                    pass
 
-            count, division = np.histogram(cycle_time_data)
-            labels = bucket_labels(division)
+                labels = bucket_labels(buckets)
+                count, division = np.histogram(cycle_time_data[cycle], bins=buckets)
+            else:
 
-        histogram = pd.DataFrame(count, index=labels, columns=[cycle])
-        histogram.index.name = 'bucket'
+                count, division = np.histogram(cycle_time_data[cycle])
+                labels = bucket_labels(division)
+
+            cycle_histogram = pd.DataFrame(count, index=labels, columns=[cycle])
+            cycle_histogram.index.name = 'bucket'
+
+            if histogram is None:
+                histogram = cycle_histogram.copy(deep=True)
+            else:
+                old_histogram = histogram.copy(deep=True)
+                histogram = old_histogram.join(cycle_histogram, how='outer')
 
         return histogram
 
