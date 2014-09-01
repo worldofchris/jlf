@@ -45,6 +45,9 @@ def publish(config, jira, from_date, to_date):
         if report['metric'] == 'cumulative-throughput':
             data = jira.throughput(from_date, to_date, cumulative=True, types=types)
 
+        if report['metric'] == 'cfd':
+            data = jira.cfd(from_date, to_date)
+
         if report['metric'] == 'demand':
             data = jira.demand(from_date, to_date, report['types'])
 

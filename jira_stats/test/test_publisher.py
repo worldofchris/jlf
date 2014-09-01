@@ -54,6 +54,7 @@ class TestGetOutput(unittest.TestCase):
         self.mock_jira_wrapper.done.side_effect = serve_dummy_results
         self.mock_jira_wrapper.cycle_time_histogram.side_effect = serve_dummy_results
         self.mock_jira_wrapper.arrival_rate.side_effect = serve_dummy_results
+        self.mock_jira_wrapper.cfd.side_effect = serve_dummy_results
         
         self.workspace = tempfile.mkdtemp()
 
@@ -239,6 +240,29 @@ class TestGetOutput(unittest.TestCase):
 
         workbook = xlrd.open_workbook(actual_output)
         self.assertEqual('value-develop-cycle-time', workbook.sheet_names()[0])
+
+
+    def testOutputCFDToExcel(self):
+
+        report_config = {'name':     'reports',
+                         'reports':  [{'metric': 'cfd'}],
+                         'format':   'xlsx',
+                         'location': self.workspace}
+
+        publisher.publish(report_config,
+                          self.mock_jira_wrapper,
+                          from_date=date(2012, 10, 8),
+                          to_date=date(2012, 11, 12))        
+
+        expected_filename = 'reports.xlsx'
+        actual_output = os.path.join(self.workspace, expected_filename)
+
+        self.assertTrue(os.path.isfile(actual_output), "Spreadsheet not published:{spreadsheet}".format(spreadsheet=actual_output))
+
+        # with a sheet containing the throughput data
+
+        workbook = xlrd.open_workbook(actual_output)
+        self.assertEqual('cfd', workbook.sheet_names()[0])
 
 
     def testMakeValidSheetTitle(self):
