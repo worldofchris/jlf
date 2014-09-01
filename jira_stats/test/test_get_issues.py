@@ -104,6 +104,8 @@ class TestGetMetrics(unittest.TestCase):
 
     ongoing = ["In Progress", "Awaiting Review", "Peer Review", "Awaiting Customer Approval", "Customer Approval"]
 
+    states = ['In Progress', 'pending','Customer Approval']
+
     jira_config = {
         'server': 'jiratron.worldofchris.com',
         'username': 'mrjira',
@@ -111,7 +113,8 @@ class TestGetMetrics(unittest.TestCase):
         'categories': categories,
         'cycles': cycles,
         'types': types,
-        'ongoing': ongoing
+        'ongoing': ongoing,
+        'states': states
     }
 
     # There are three sets of issues to match the three categories that get searched for in the tests

@@ -48,6 +48,8 @@ class JiraWrapper(object):
             self.cycles = config['cycles']
             self.types = config['types']
             self.ongoing_states = config['ongoing']
+            self.states = config['states']
+            self.states.append(None)
         except KeyError:
             pass
 
@@ -161,38 +163,7 @@ class JiraWrapper(object):
                 TODO: take from config
                 """
                 try:
-                    states = ['Unknown',
-                              'Open',
-                              'Created',
-                              'Backlog',
-                              'Horizon',
-                              'To Do',
-                              'Queued',
-                              'Dev Backlog',
-                              'Sprint Backlog',
-                              'In Progress',
-                              'Blocked',
-                              'Awaiting Review',
-                              'PR Queue',
-                              'Peer Review',
-                              'PR Review',
-                              'pending',
-                              'Dev Complete',
-                              'On Hold',
-                              'QA Queue',
-                              'QA review',
-                              'Awaiting Customer Approval',
-                              'Awaiting Customer Review',
-                              'Customer Queue',
-                              'Customer Approval',
-                              'Customer Review',
-                              'Ready for Release',
-                              'Done',
-                              'Reopened',
-                              'Closed',
-                              'Resolved',
-                              None]
-                    return states.index(state)
+                    return self.states.index(state)
                 except ValueError:
                     if type(state) == float:
                         if math.isnan(state):
