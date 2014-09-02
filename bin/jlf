@@ -3,13 +3,13 @@
 Get forward looking metrics from JIRA
 """
 
-from jira_stats.jira_wrapper import JiraWrapper
+from jira_stats.jira_wrapper import JiraWrapper, MissingState, MissingConfigItem
 from jira_stats import publisher
 
 import json
 from datetime import datetime, timedelta
 import argparse
-import os
+import sys
 
 def main():
 
@@ -41,11 +41,16 @@ def main():
     end_date = datetime.now()
     start_date = end_date - timedelta(weeks=args.num_weeks)
 
-    publisher.publish(config,
-                      our_jira,
-                      from_date=start_date.date(),
-                      to_date=end_date.date())        
-    
+    try:
+        publisher.publish(config,
+                          our_jira,
+                          from_date=start_date.date(),
+                          to_date=end_date.date())        
+    except MissingState as error:
+        sys.exit("Missing state:{0}".format(error))
+
+    except MissingConfigItem as error:
+        sys.exit("Missing config parameter:{0}".format(error))
 
 if __name__ == "__main__":
     main()

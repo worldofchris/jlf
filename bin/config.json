@@ -23,6 +23,8 @@
             "Task"
         ]
     },
+    "ongoing": [],
+    "states": ["Open", "In Progress", "Resolved", "Closed"],
     "name": "reports",
     "reports": [
         {

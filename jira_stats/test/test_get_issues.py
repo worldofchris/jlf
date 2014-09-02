@@ -8,6 +8,7 @@ from datetime import date
 from jira_stats.jira_wrapper import JiraWrapper
 from jira_stats.index import fill_date_index_blanks, week_start_date
 from jira_stats.bucket import bucket_labels
+from jira_stats.jira_wrapper import MissingState, MissingConfigItem
 
 from pandas.util.testing import assert_frame_equal
 
@@ -103,7 +104,6 @@ class TestGetMetrics(unittest.TestCase):
     }
 
     ongoing = ["In Progress", "Awaiting Review", "Peer Review", "Awaiting Customer Approval", "Customer Approval"]
-
     states = ['In Progress', 'pending','Customer Approval']
 
     jira_config = {
@@ -755,3 +755,33 @@ class TestGetMetrics(unittest.TestCase):
         actual = bucket_labels([0, 6, 11, 20])
 
         self.assertEqual(actual, expected)
+
+
+
+    def testFailGracefullyIfMissingStates(self):
+        """
+        If we are missing states in the CFD report then exit and tell user which state is missing
+        """
+        jira_config = copy.copy(self.jira_config)
+        jira_config['states'] = []
+        our_jira = JiraWrapper(config=jira_config)
+
+        for dummy_issue in self.dummy_issues['Ops Tools']:
+            dummy_issue.changelog = None
+
+        for dummy_issue in self.dummy_issues['Portal']:
+            dummy_issue.changelog = None
+
+        for dummy_issue in self.dummy_issues['Reports']:
+            dummy_issue.changelog = None
+
+        self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                          mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+
+        self.assertRaises(MissingState, our_jira.cfd, until_date=date(2012, 1, 8))
+
+    def testFailGracefullyIfMissingConfigParams(self):
+
+        jira_config = copy.copy(self.jira_config)
+        jira_config.pop('types', None)
+        self.assertRaises(MissingConfigItem, JiraWrapper, config=jira_config)

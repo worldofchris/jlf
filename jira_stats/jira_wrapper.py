@@ -28,6 +28,18 @@ from bucket import bucket_labels
 
 from collections import Counter
 
+class MissingState(Exception):
+
+    def __init__(self, expr, msg):
+        self.expr = expr
+        self.msg = msg
+
+class MissingConfigItem(Exception):
+
+    def __init__(self, expr, msg):
+        self.expr = expr
+        self.msg = msg
+
 class JiraWrapper(object):
     """
     Wrapper around our JIRA instance
@@ -42,21 +54,31 @@ class JiraWrapper(object):
         self.cycles = None
         self.types = None
         self.ongoing_states = None
+        self.states = []
 
         try:
             self.categories = config['categories']
             self.cycles = config['cycles']
             self.types = config['types']
-            self.ongoing_states = config['ongoing']
-            self.states = config['states']
-            self.states.append(None)
-        except KeyError:
-            pass
-
+        except KeyError as e:
+            raise MissingConfigItem(e, "Missing Config Item:{0}".format(e))
         try:
             self.counts_towards_throughput = config['counts_towards_throughput']
         except KeyError:
             self.counts_towards_throughput = ' AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)'
+
+        # Optional
+
+        try:
+            self.ongoing_states = config['ongoing']
+        except KeyError:
+            pass
+
+        try:
+            self.states = config['states']
+            self.states.append(None)
+        except KeyError:
+            pass
 
         self.done_issues = None
         self.ongoing_issues = None
@@ -171,7 +193,7 @@ class JiraWrapper(object):
                     if type(state) == np.float64:
                         if math.isnan(state):
                             return -1
-                    raise
+                    raise MissingState(state, "Missing state:{0}".format(state))
             
             days[day] = sorted(tickets, key=state_order)
 
