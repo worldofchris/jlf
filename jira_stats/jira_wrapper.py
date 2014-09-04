@@ -214,7 +214,7 @@ class JiraWrapper(object):
 
         # Does ongoing exclude done in its query?
         df = pd.DataFrame(issue_rows)
-        table = pd.tools.pivot.pivot_table(df, rows=['week_created'], columns=['swimlane'], values='count', aggfunc=np.count_nonzero)
+        table = pd.tools.pivot.pivot_table(df, rows=['week_created'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
 
         reindexed = table.reindex(index=fill_date_index_blanks(table.index), fill_value=np.int64(0))
         return reindexed
