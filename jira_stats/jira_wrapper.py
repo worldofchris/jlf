@@ -193,6 +193,7 @@ class JiraWrapper(object):
                     if type(state) == np.float64:
                         if math.isnan(state):
                             return -1
+
                     raise MissingState(state, "Missing state:{0}".format(state))
             
             days[day] = sorted(tickets, key=state_order)
@@ -277,7 +278,7 @@ class JiraWrapper(object):
 
         if len(df.index) > 0:
 
-            table = pd.tools.pivot.pivot_table(df, index=['week'], columns=['swimlane'], values='count', aggfunc=np.count_nonzero)
+            table = pd.tools.pivot.pivot_table(df, rows=['week'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
 
             reindexed = table.reindex(index=fill_date_index_blanks(table.index), fill_value=np.int64(0))
             noncum = reindexed.fillna(0)
