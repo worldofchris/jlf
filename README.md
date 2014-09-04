@@ -129,8 +129,11 @@ You can specify the types of work and the cycle you want to report on:
             ],
             "cycles": [
                 "develop"
-            ]
+            ],
+            "buckets": [0,6,11,21,51,"max"]
         }
+
+You can optionlly specify your bucket edges to determine how the issues will be grouped.  The keyword "max" denotes the largest cycle length found.
 
 You can then graph the resulting data like this:
 
