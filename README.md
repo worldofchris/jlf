@@ -116,6 +116,26 @@ The metrics to be included are then specified in:
 	    
 The following metrics are available and can be configured as described below:
 
+#### Cycle Time Histogram
+
+How long does it take us to get work done?
+
+You can specify the types of work and the cycle you want to report on:
+
+        {
+            "metric": "cycle-time",
+            "types": [
+                "value", "failure", "oo"
+            ],
+            "cycles": [
+                "develop"
+            ]
+        }
+
+You can then graph the resulting data like this:
+
+![image](public/assets/histogram.png)
+
 #### Demand
 
 What sort of work are we being asked to do?  How much of it is to add value?  How much of it is dealing with defects or problems in the system?  How much of it is operational overhead?

@@ -60,7 +60,14 @@ def publish(config, jira, from_date, to_date):
             data = jira.done()
 
         if report['metric'] == 'cycle-time':
-            data = jira.cycle_time_histogram(report['cycles'][0])
+            types = None
+            if 'types' in report:
+                types = report['types']
+
+            buckets = None
+            if 'buckets' in report:
+                buckets = report['buckets']
+            data = jira.cycle_time_histogram(report['cycles'][0], types=types, buckets=buckets)
 
         if report['metric'] == 'arrival-rate':
             data = jira.arrival_rate(from_date, to_date)
