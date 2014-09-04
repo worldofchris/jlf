@@ -134,6 +134,7 @@ class JiraWrapper(object):
                     total_days = 0
 
                     for state_days in issue_history:
+
                         state = state_days['state']
                         days = state_days['days']
 
@@ -266,11 +267,14 @@ class JiraWrapper(object):
                                                                resolution_date.isocalendar()[1]).strftime('%Y-%m-%d'),
                                  'project':    f.project.name,
                                  'type':       f.issuetype.name,
-                                 'components': [],
+                                 'components': None,
                                  'count':      1}
 
+                    components = []
                     for component in f.components:
-                        issue_row['components'].append(component.name)
+                        components.append(component.name)
+
+                    issue_row['components'] = ",".join(components)
 
                     issue_rows.append(issue_row)
 
@@ -561,10 +565,12 @@ class JiraWrapper(object):
                     except AttributeError:
                         pass
 
+                components = []
+
                 for component in f.components:
-                    if issue_row['components'] is None:
-                        issue_row['components'] = []
-                    issue_row['components'].append(component.name)
+                    components.append(component.name)
+
+                issue_row['components'] = ",".join(components)
 
                 issue_rows.append(issue_row)
 

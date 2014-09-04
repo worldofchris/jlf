@@ -47,7 +47,7 @@ def main():
                           from_date=start_date.date(),
                           to_date=end_date.date())        
     except MissingState as error:
-        sys.exit("Missing state:{0}".format(error))
+        sys.exit(error.msg)
 
     except MissingConfigItem as error:
         sys.exit("Missing config parameter:{0}".format(error))

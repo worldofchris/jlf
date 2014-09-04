@@ -104,7 +104,7 @@ def colour_cfd(workbook, worksheet, data, formats):
     for i, row in enumerate(data.values):
         for j, cell in enumerate(row):
 
-            if cell != '':
+            try:
                 color = formats[cell]['color']
                 if color not in workbook_formats:
 
@@ -114,7 +114,8 @@ def colour_cfd(workbook, worksheet, data, formats):
 
                 cell_ref = xl_rowcol_to_cell(i+1, j+1)
                 worksheet.write(cell_ref, cell, workbook_formats[color])
-
+            except KeyError:
+                pass
 
 def worksheet_title(full_title):
     """
