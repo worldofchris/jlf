@@ -188,8 +188,6 @@ Chapter 12 of Henrik Kniberg's *Lean from the Trenches* is very good on using cu
 
         {
             "metric": "cumulative-throughput",
-            "categories": "foreach",
-            "types": "foreach"
         },
 
 #### Cumulative Flow
@@ -198,12 +196,43 @@ You can make some pretty big Cumulative Flow Diagrams:
 
 ![image](public/assets/long-cfd.jpg)
 
-The 'colouring in' of this one was done using a bit of [VBA](https://gist.github.com/worldofchris/c1652352f55619c0420f).
+The CFD currently reports on the whole timespan of the issues retrieved from JIRA.  To specify a CFD report you just need to include the metric in the config:
+
+        {
+            "metric": "cfd"
+        },
+
+You also need to specify the order in which states occur.  This is specified in the main body of the config, i.e. outside the `reports` block:
+
+    "states": ["Open",
+               "Dev Backlog",
+               "In Progress",
+               "PR Queue",
+               "PR Review",
+               "QA Queue",
+               "QA review",
+               "Customer Queue",
+               "Customer Review",
+               "Approved for Deployment",
+               "Closed"],
+
+To have the CFD coloured in you need to specify a colour for each of these states.  This _is_ specified in the report block:
 
         {
             "metric": "cfd",
-            "types": "foreach"
+            "format": {       "Open": {"color": "#ffffd9"},
+                       "Dev Backlog": {"color": "#edf8b1"},
+                       "In Progress": {"color": "#c7e9b4"},
+                          "PR Queue": {"color": "#7fcdbb"},
+                         "PR Review": {"color": "#41b6c4"},
+                          "QA Queue": {"color": "#1d91c0"},
+                         "QA review": {"color": "#1d91c0"},
+                    "Customer Queue": {"color": "#225ea8"},
+                   "Customer Review": {"color": "#253494"},
+           "Approved for Deployment": {"color": "#225ea8"},
+                            "Closed": {"color": "#253494"}}
         },
+
 
 #### Issue History
 
