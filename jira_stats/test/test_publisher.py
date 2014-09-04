@@ -19,6 +19,8 @@ from jira_stats import publisher
 from datetime import date
 import pandas as pd
 import xlrd
+import zipfile
+import filecmp
 
 def serve_dummy_results(*args, **kwargs):
 
@@ -43,6 +45,14 @@ def serve_dummy_throughput(*args, **kwargs):
 
         return pd.DataFrame({'one': [1, 2, 3]})
 
+def serve_dummy_cfd_data(*args, **kwargs):
+
+    dummy = pd.DataFrame([['',     'in progress', 'closed'],
+                          ['open', 'in progress', 'closed'],
+                          ['open', 'closed',      'closed']])
+
+    return dummy
+
 
 class TestGetOutput(unittest.TestCase):
 
@@ -54,7 +64,8 @@ class TestGetOutput(unittest.TestCase):
         self.mock_jira_wrapper.done.side_effect = serve_dummy_results
         self.mock_jira_wrapper.cycle_time_histogram.side_effect = serve_dummy_results
         self.mock_jira_wrapper.arrival_rate.side_effect = serve_dummy_results
-        self.mock_jira_wrapper.cfd.side_effect = serve_dummy_results
+
+        self.mock_jira_wrapper.cfd.side_effect = serve_dummy_cfd_data
         
         self.workspace = tempfile.mkdtemp()
 
@@ -344,4 +355,57 @@ class TestGetOutput(unittest.TestCase):
         self.assertEqual(expected_sheet_name, workbook.sheet_names()[0])
         worksheet = workbook.sheet_by_name(expected_sheet_name)
         header_row = worksheet.row(0)
-        expected_headers = ['one', 'two', 'three']      
+        expected_headers = ['one', 'two', 'three']
+
+        # This isn't finished
+
+    def testColourInExcelCfd(self):
+
+        report_config = {'name':     'reports',
+                         'reports':  [{'metric': 'cfd',
+                                       'format': {'open': {'color': 'green'},
+                                                  'in progress': {'color': 'red'},
+                                                  'closed': {'color': 'yellow'}},
+                                      }],
+                         'format':   'xlsx',
+                         'location': self.workspace}
+
+        publisher.publish(report_config,
+                          self.mock_jira_wrapper,
+                          from_date=date(2012, 10, 8),
+                          to_date=date(2012, 11, 12))
+
+        expected_filename = 'reports.xlsx'
+        actual_output = os.path.join(self.workspace, expected_filename)
+
+        self.assertTrue(os.path.isfile(actual_output), "Spreadsheet not published:{spreadsheet}".format(spreadsheet=actual_output))
+
+        # Sadly reading of xlsx files with their formatting by xlrd is not supported.
+        # Looking at the Open Office XML format you can see why - http://en.wikipedia.org/wiki/Office_Open_XML
+        # It's not exactly human readable.
+        #
+        # So, I am going to unzip the resulting xlsx file and diff the worksheet against a known good one.
+
+        cmp_files = ['xl/worksheets/sheet1.xml',
+                     'xl/sharedStrings.xml',
+                     'xl/styles.xml', 
+                     'xl/workbook.xml', 
+                     'xl/theme/theme1.xml']
+
+        expected_workspace = os.path.join(self.workspace, 'expected')
+        os.makedirs(expected_workspace)
+        expected_output = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'reports.xlsx')
+
+        with zipfile.ZipFile(expected_output, "r") as z:
+            z.extractall(expected_workspace)
+
+        actual_workspace = os.path.join(self.workspace, 'actual')
+        os.makedirs(actual_workspace)
+
+        with zipfile.ZipFile(actual_output, "r") as z:
+            z.extractall(actual_workspace)
+
+        for cmp_file in cmp_files:
+            expected_full_path = os.path.join(expected_workspace, cmp_file)
+            actual_full_path = os.path.join(actual_workspace, cmp_file)
+            self.assertTrue(filecmp.cmp(expected_full_path, actual_full_path))

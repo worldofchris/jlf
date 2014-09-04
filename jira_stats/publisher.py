@@ -8,6 +8,8 @@ a Jira Wrapper which provides the data for the reports
 import os
 import pandas as pd
 
+from xlsxwriter.utility import xl_rowcol_to_cell
+
 def publish(config, jira, from_date, to_date):
     
     writer = None
@@ -16,7 +18,7 @@ def publish(config, jira, from_date, to_date):
         excel_basename = config['name']
         excel_filename = os.path.join(config['location'], 
                                       excel_basename + '.xlsx')
-        writer = pd.ExcelWriter(excel_filename) # , engine='xlsxwriter')
+        writer = pd.ExcelWriter(excel_filename, engine='xlsxwriter')
 
 
     for report in config['reports']:
@@ -81,8 +83,37 @@ def publish(config, jira, from_date, to_date):
 
                 data.to_excel(writer, worksheet_title('-'.join(sheet_name)))
 
+                if report['metric'] == 'cfd':
+                    if 'format' in report:
+                        formats = report['format']
+
+                        workbook = writer.book
+                        sheets = [sheet for sheet in workbook.worksheets() if sheet.name == 'cfd']
+                        # Do the colouring in
+
+                        colour_cfd(workbook, sheets[0], data, formats)
+
     if isinstance(writer, pd.ExcelWriter):
         writer.save()
+
+
+def colour_cfd(workbook, worksheet, data, formats):
+
+    workbook_formats = {}
+
+    for i, row in enumerate(data.values):
+        for j, cell in enumerate(row):
+
+            if cell != '':
+                color = formats[cell]['color']
+                if color not in workbook_formats:
+
+                    new_format = workbook.add_format()
+                    new_format.set_bg_color(color)
+                    workbook_formats[color] = new_format
+
+                cell_ref = xl_rowcol_to_cell(i+1, j+1)
+                worksheet.write(cell_ref, cell, workbook_formats[color])
 
 
 def worksheet_title(full_title):

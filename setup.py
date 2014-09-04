@@ -29,11 +29,12 @@ setup(
         'mockito==0.5.1',
         'numpy',
         'openpyxl==1.6.2',
-        'pandas==0.12.0',
+        'pandas==0.13.1',
         'python-dateutil==1.5',
         'pytz==2013b',
         'six==1.3.0',
         'xlrd==0.9.2',
-        'xlwt==0.7.5'        
+        'xlwt==0.7.5',
+        'XlsxWriter==0.5.7'        
     ]
 )
