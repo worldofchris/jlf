@@ -85,6 +85,22 @@ To do this JLF lets you specify a number of cycles.  Each cycle is described in 
         }
     },
 
+### States
+
+If you want to report on any metrics which need to know about state order, ie. CFDs, you need to specify the states and their order in the config:
+
+    "states": ["Open",
+               "Dev Backlog",
+               "In Progress",
+               "PR Queue",
+               "PR Review",
+               "QA Queue",
+               "QA review",
+               "Customer Queue",
+               "Customer Review",
+               "Approved for Deployment",
+               "Closed"],
+
 ### Definition of Done
 
 In order to calculate throughput, JLF needs to know what constitutes a successfully completed piece of work.  By default this is:
@@ -225,21 +241,7 @@ The CFD currently reports on the whole timespan of the issues retrieved from JIR
             "metric": "cfd"
         },
 
-You also need to specify the order in which states occur.  This is specified in the main body of the config, i.e. outside the `reports` block:
-
-    "states": ["Open",
-               "Dev Backlog",
-               "In Progress",
-               "PR Queue",
-               "PR Review",
-               "QA Queue",
-               "QA review",
-               "Customer Queue",
-               "Customer Review",
-               "Approved for Deployment",
-               "Closed"],
-
-To have the CFD coloured in you need to specify a colour for each of these states.  This _is_ specified in the report block:
+To override the default colours you can specify a colour for each state:
 
         {
             "metric": "cfd",

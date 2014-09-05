@@ -10,6 +10,19 @@ import pandas as pd
 
 from xlsxwriter.utility import xl_rowcol_to_cell
 
+_state_default_colours = ['#8dd3c7',
+                          '#ffffb3',
+                          '#bebada',
+                          '#fb8072',
+                          '#80b1d3',
+                          '#fdb462',
+                          '#b3de69',
+                          '#fccde5',
+                          '#d9d9d9',
+                          '#bc80bd',
+                          '#ccebc5',
+                          '#ffed6f']
+
 def publish(config, jira, from_date, to_date):
     
     writer = None
@@ -93,16 +106,28 @@ def publish(config, jira, from_date, to_date):
                 if report['metric'] == 'cfd':
                     if 'format' in report:
                         formats = report['format']
+                    else:
+                        formats = format_states(config['states'])
+                    workbook = writer.book
+                    sheets = [sheet for sheet in workbook.worksheets() if sheet.name == 'cfd']
+                    # Do the colouring in
 
-                        workbook = writer.book
-                        sheets = [sheet for sheet in workbook.worksheets() if sheet.name == 'cfd']
-                        # Do the colouring in
-
-                        colour_cfd(workbook, sheets[0], data, formats)
+                    colour_cfd(workbook, sheets[0], data, formats)
 
     if isinstance(writer, pd.ExcelWriter):
         writer.save()
 
+def format_states(states):
+
+    formats = {}
+    
+    for index, state in enumerate(states):
+        try:
+            formats[state] = {'color': _state_default_colours[index]}
+        except IndexError:
+            formats[state] = {'color': _state_default_colours[index - len(states)]}
+
+    return formats
 
 def colour_cfd(workbook, worksheet, data, formats):
 

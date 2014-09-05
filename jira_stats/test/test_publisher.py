@@ -256,6 +256,7 @@ class TestGetOutput(unittest.TestCase):
     def testOutputCFDToExcel(self):
 
         report_config = {'name':     'reports',
+                         'states':   [],
                          'reports':  [{'metric': 'cfd'}],
                          'format':   'xlsx',
                          'location': self.workspace}
@@ -359,6 +360,57 @@ class TestGetOutput(unittest.TestCase):
 
         # This isn't finished
 
+    def testGetDefaultColours(self):
+        """
+        If a cfd report doesn't specify formats for the states then use the defaults
+        """
+        expected_formats = {'open': {'color': publisher._state_default_colours[0]},
+                            'in progress': {'color': publisher._state_default_colours[1]},
+                            'closed': {'color': publisher._state_default_colours[2]}}
+
+        states = ['open', 'in progress', 'closed']
+
+        actual_formats = publisher.format_states(states)
+
+        self.assertEqual(actual_formats, expected_formats)
+
+    def testMoreStatesThanDefaultColours(self):
+        """
+        What to do if we run out of default colours
+        """
+        expected_formats = {}
+        states = []
+
+        for a in range(2):
+            for index, colour in enumerate(publisher._state_default_colours):
+                state_name = 's{0}{1}'.format(a, index)
+                expected_formats[state_name] = {'color': colour}
+                states.append(state_name)
+
+        actual_formats = publisher.format_states(states)
+
+        self.assertEqual(actual_formats, expected_formats, expected_formats)
+
+    def testCfdDefaultColours(self):
+
+        report_config = {'name':     'reports_default',
+                         'states':   ['open', 'in progress', 'closed'],
+                         'reports':  [{'metric': 'cfd'}],
+                         'format':   'xlsx',
+                         'location': self.workspace}
+
+        publisher.publish(report_config,
+                          self.mock_jira_wrapper,
+                          from_date=date(2012, 10, 8),
+                          to_date=date(2012, 11, 12))
+
+        expected_filename = 'reports_default.xlsx'
+        actual_output = os.path.join(self.workspace, expected_filename)
+
+        self.assertTrue(os.path.isfile(actual_output), "Spreadsheet not published:{spreadsheet}".format(spreadsheet=actual_output))
+
+        self.compareExcelFiles(actual_output, expected_filename)
+
     def testColourInExcelCfd(self):
 
         report_config = {'name':     'reports',
@@ -380,6 +432,10 @@ class TestGetOutput(unittest.TestCase):
 
         self.assertTrue(os.path.isfile(actual_output), "Spreadsheet not published:{spreadsheet}".format(spreadsheet=actual_output))
 
+        self.compareExcelFiles(actual_output, expected_filename)
+
+    def compareExcelFiles(self, actual_output, expected_filename):
+
         # Sadly reading of xlsx files with their formatting by xlrd is not supported.
         # Looking at the Open Office XML format you can see why - http://en.wikipedia.org/wiki/Office_Open_XML
         # It's not exactly human readable.
@@ -394,7 +450,7 @@ class TestGetOutput(unittest.TestCase):
 
         expected_workspace = os.path.join(self.workspace, 'expected')
         os.makedirs(expected_workspace)
-        expected_output = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'reports.xlsx')
+        expected_output = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', expected_filename)
 
         with zipfile.ZipFile(expected_output, "r") as z:
             z.extractall(expected_workspace)
@@ -408,4 +464,4 @@ class TestGetOutput(unittest.TestCase):
         for cmp_file in cmp_files:
             expected_full_path = os.path.join(expected_workspace, cmp_file)
             actual_full_path = os.path.join(actual_workspace, cmp_file)
-            self.assertTrue(filecmp.cmp(expected_full_path, actual_full_path))
+            self.assertTrue(filecmp.cmp(expected_full_path, actual_full_path), '{0}:{1}'.format(expected_full_path, actual_full_path))

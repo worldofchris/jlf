@@ -587,6 +587,7 @@ class TestGetMetrics(unittest.TestCase):
         # e.g.
         # {"id":"customfield_10002","name":"Story Points","custom":true,"orderable":true,"navigable":true,"searchable":true,"schema":{"type":"number","custom":"com.atlassian.jira.plugin.system.customfieldtypes:float","customId":10002}},{"id":"customfield_10003","name":"Business Value","custom":true,"orderable":true,"navigable":true,"searchable":true,"schema":{"type":"number","custom":"com.atlassian.jira.plugin.system.customfieldtypes:float","customId":10003}}
         # These are going to need to be specified in the config file and mapped to their internal Jira names
+        # MVP would be for this mapping to be provided in the config file
         pass
 
     @unittest.skip("Pass the clippers")
@@ -785,3 +786,14 @@ class TestGetMetrics(unittest.TestCase):
         jira_config = copy.copy(self.jira_config)
         jira_config.pop('types', None)
         self.assertRaises(MissingConfigItem, JiraWrapper, config=jira_config)
+
+    def testGetTotalsInStates(self):
+        """
+        We just want the headline figures on our WIP levels and queue lengths across the Project Portfolio.
+        """
+
+        expected = [
+            {'Ops Tools': { 'queued': 10, 'in progress': 5, 'customer queue': 1},
+             'Portal':    { 'queued':  0, 'in progress': 2, 'customer queue': 5},
+             'Reports':   { 'queued':  2, 'in progress': 4, 'customer queue': 5}}
+        ]
