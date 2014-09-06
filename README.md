@@ -41,11 +41,25 @@ To start getting metrics out of JIRA you'll need a JSON config file describing y
 
 ### Jira Instance
 
-JLF needs to know where to look for the issues to report on.  You need to provide a server URL, username and password:
+JLF needs to know where to look for the issues to report on.  You need to provide a server URL, and authentication credentials.  These can either be basic authenticion using username and password:
 
     "server": "https://worldofchris.atlassian.net",
-    "username": "readonly",
-    "password": "WTFFTW!",
+    "authentication": {
+        "username": "readonly",
+        "password": "WTFFTW!"
+    },
+    
+ or OAuth:
+
+    "server": "https://worldofchris.atlassian.net",
+    "authentication": {
+        "access_token": "In3d5YsFmqRTDJah2gg5sNH0WM2ekKzA",
+        "access_token_secret": "9COeo40njrZGgMU8GjqjdEpKye6TLDXJ",
+        "consumer_key": "jlf",
+        "key_cert": "/path/to/cert.pem"
+    }
+ 
+Configuring OAuth access to JIRA is described in more detail at the end of this README.     
     
 ### Categories
 
@@ -294,7 +308,57 @@ Where `CONFIG_FILE` is the path to your config file and `NUM_WEEKS` is the numbe
 
 		nosetests jira_stats.test.test_get_issues:TestGetMetrics.testGetArrivalRate
 
+## Configuring OAuth access to JIRA
 
-	
+If you are using OAuth to access JIRA you need to add an Application Link to your JIRA instance and then do the OAuth Dance to obtain your Access Token and Access Token Secret.
 
+### Generating a Key Pair
 
+The Application Link requires the public key of an RSA key-pair.  You then use the private key to do the OAuth Dance.
+
+If you don't have one already you can generate them with:
+
+	openssl genrsa -out jira.pem 1024
+	openssl rsa -in jira.pem -pubout -out jira.pub
+
+Thanks to [beeplogic](https://answers.atlassian.com/questions/45037/how-do-you-configure-jira-to-use-oauth-with-a-generic-application-specifically-jenkins) for the commands for generating an RSA key-pair.
+
+### Adding an Application Link
+
+As an adimistrator, under Administration | Add-ons | Application Links enter a URL to identify _jlf_:
+
+![image](public/assets/add-application-link.png)
+
+Even though _jlf_ is a console app and does not have a URL you have to identify it with a URL.  You will get a warning that "No response was received from the URL you entered" which you can safely ignore.
+
+You can re-use this URL for the Request Token URL, Access token URL amd Authorize URL:
+
+![image](public/assets/link-applications-1.png)
+
+**Create incoming link needs** to be checked.
+
+![image](public/assets/link-applications-2.png)
+
+### Doing to OAuth Dance
+
+To get an Access Token and Access Token Secret run jirashell with the following flags:
+
+ * `-od` tells jirashell to do the OAuth Dance.
+ * `-k` path to the private key of your RSA key-pair.
+ * `-ck` Consumer key specified in the Application Link.
+ * `-pt` tells jirashell to print out the Access token and Access token secret.  
+
+For example:
+
+		jirashell -s https://worldofchris.atlassian.net -od -k ~/.ssh/jira.pem -ck jlf -pt
+		Request tokens received.
+    		Request token:        G92UPCBWLOvDYr2kfrZoKTmC8QyZtQ36
+    		Request token secret: uckUts4NPZ0jcuEwgQL6WDcx78vxHTQM
+		Your browser is opening the OAuth authorization for this client session.
+		Have you authorized this program to connect on your behalf to https://worldofchris.atlassian.net? (y/n)y
+		Access tokens received.
+    		Access token:        Akif9EqT7FqslmUctbnHxVRD2tmbFcHu
+    		Access token secret: uckUts4NPZ0jcuEwgQL6WDcx78vxHTQM
+		<JIRA Shell 0.16 (https://worldofchris.atlassian.net)>
+
+		*** JIRA shell active; client is in 'jira'. Press Ctrl-D to exit.

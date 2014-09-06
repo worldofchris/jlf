@@ -19,6 +19,7 @@ import copy
 
 import jira.client
 
+import os
 
 class MockProject(object):
 
@@ -108,8 +109,10 @@ class TestGetMetrics(unittest.TestCase):
 
     jira_config = {
         'server': 'jiratron.worldofchris.com',
-        'username': 'mrjira',
-        'password': 'foo',
+        'authentication': {
+            'username': 'mrjira',
+            'password': 'foo'
+        },
         'categories': categories,
         'cycles': cycles,
         'types': types,
@@ -787,6 +790,7 @@ class TestGetMetrics(unittest.TestCase):
         jira_config.pop('types', None)
         self.assertRaises(MissingConfigItem, JiraWrapper, config=jira_config)
 
+    @unittest.skip("Hang on whilst I add tests for Oauth")
     def testGetTotalsInStates(self):
         """
         We just want the headline figures on our WIP levels and queue lengths across the Project Portfolio.
@@ -797,3 +801,79 @@ class TestGetMetrics(unittest.TestCase):
              'Portal':    { 'queued':  0, 'in progress': 2, 'customer queue': 5},
              'Reports':   { 'queued':  2, 'in progress': 4, 'customer queue': 5}}
         ]
+
+    def testConfigureWithBasicAuth(self):
+        """
+        In adding oauth we are changing the way authentication is stored in the config.  It is now
+        encapsulated in its own dict.
+        """
+
+        basic_jira_config = {
+            "server": "https://worldofchris.atlassian.net",
+            "categories": [],
+            "cycles": [],
+            "types": [],
+            "authentication": {
+                "username": "mrjira",
+                "password": "234214234324"
+            }
+        }
+
+        our_jira = JiraWrapper(config=basic_jira_config)
+
+        self.mock_jira.JIRA.assert_called_with({'server': basic_jira_config['server']},
+                                               basic_auth=(basic_jira_config['authentication']['username'], 
+                                                           basic_jira_config['authentication']['password']))
+
+        # What can we meaningfully assert here?
+
+    def testConfigureWithOauth(self):
+        """
+        We want to be able to connect to JIRA with Oauth and not just basic auth esp. if we want to make this
+        available as a web service.
+        """
+
+        key_cert = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'key.pem')
+
+        oauth_jira_config = {
+            "server": "https://worldofchris.atlassian.net",
+            "categories": [],
+            "cycles": [],
+            "types": [],
+            "authentication": {
+                'access_token': 'In3d5YsFmqRTDJah2gg5sNH0WM2ekKzA',
+                'access_token_secret': '9COeo40njrZGgMU8GjqjdEpKye6TLDXJ',
+                'consumer_key': 'jlf',
+                'key_cert': key_cert
+            }
+        }      
+
+        with open(key_cert, 'r') as key_cert_file:
+            key_cert_data = key_cert_file.read()
+ 
+        our_jira = JiraWrapper(config=oauth_jira_config)
+
+        self.mock_jira.JIRA.assert_called_with({'server': oauth_jira_config['server']},
+                                               oauth={'access_token': oauth_jira_config['authentication']['access_token'],
+                                                      'access_token_secret': oauth_jira_config['authentication']['access_token_secret'],
+                                                      'consumer_key': oauth_jira_config['authentication']['consumer_key'],
+                                                      'key_cert': key_cert_data})
+
+    def testMissingKeyCertFile(self):
+
+        missing_key_cert = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'missing_key.pem')
+
+        oauth_jira_config = {
+            "server": "https://worldofchris.atlassian.net",
+            "categories": [],
+            "cycles": [],
+            "types": [],
+            "authentication": {
+                'access_token': 'In3d5YsFmqRTDJah2gg5sNH0WM2ekKzA',
+                'access_token_secret': '9COeo40njrZGgMU8GjqjdEpKye6TLDXJ',
+                'consumer_key': 'jlf',
+                'key_cert': missing_key_cert
+            }
+        }      
+
+        self.assertRaises(MissingConfigItem, JiraWrapper, config=oauth_jira_config)

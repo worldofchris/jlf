@@ -34,11 +34,19 @@ class MissingState(Exception):
         self.expr = expr
         self.msg = msg
 
+    def __str__(self):
+
+        return self.msg
+
 class MissingConfigItem(Exception):
 
     def __init__(self, expr, msg):
         self.expr = expr
         self.msg = msg
+
+    def __str__(self):
+
+        return self.msg
 
 class JiraWrapper(object):
     """
@@ -47,8 +55,37 @@ class JiraWrapper(object):
 
     def __init__(self, config):
 
-        self.jira = jira.client.JIRA({'server': config['server']},
-                                     basic_auth=(config['username'], config['password']))
+        authentication = None
+
+        try:
+            authentication = config['authentication']
+        except KeyError as e:
+            raise MissingConfigItem(e, "Missing Config Item:{0}".format(e))
+
+        self.jira = None
+
+        if 'username' in authentication and 'password' in authentication:
+            self.jira = jira.client.JIRA({'server': config['server']},
+                                         basic_auth=(authentication['username'], 
+                                                     authentication['password']))
+        elif ('access_token' in authentication and
+              'access_token_secret' in authentication and
+              'consumer_key' in authentication and
+              'key_cert'):
+
+            try:
+                with open(authentication['key_cert'], 'r') as key_cert_file:
+                    key_cert_data = key_cert_file.read()
+            except IOError:
+                raise MissingConfigItem('key_cert', "key_cert not found:{0}". format(authentication['key_cert']))
+
+            self.jira = jira.client.JIRA({'server': config['server']},
+                                          oauth={'access_token': authentication['access_token'],
+                                                 'access_token_secret': authentication['access_token_secret'],
+                                                 'consumer_key': authentication['consumer_key'],
+                                                 'key_cert': key_cert_data})
+        else:
+            raise MissingConfigItem('authentication', "Authentication misconfigured")
 
         self.categories = None
         self.cycles = None
@@ -61,7 +98,7 @@ class JiraWrapper(object):
             self.cycles = config['cycles']
             self.types = config['types']
         except KeyError as e:
-            raise MissingConfigItem(e, "Missing Config Item:{0}".format(e))
+            raise MissingConfigItem(e.message, "Missing Config Item:{0}".format(e.message))
         try:
             self.counts_towards_throughput = config['counts_towards_throughput']
         except KeyError:

@@ -1,7 +1,9 @@
 {
     "server": "https://worldofchris.atlassian.net",
-    "username": "readonly",
-    "password": "WTFFTW!",
+    "authentication": {
+        "username": "readonly",
+        "password": "WTFFTW!"
+    },
     "cycles": {
         "develop": {
             "start": "Open",
