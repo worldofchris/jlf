@@ -339,7 +339,7 @@ You can re-use this URL for the Request Token URL, Access token URL amd Authoriz
 
 ![image](public/assets/link-applications-2.png)
 
-### Doing to OAuth Dance
+### Doing the OAuth Dance
 
 To get an Access Token and Access Token Secret run jirashell with the following flags:
 
