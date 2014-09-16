@@ -218,10 +218,7 @@ class JiraWrapper(object):
                 tickets.append(ticket)
 
             def state_order(state):
-                """
-                Order of states for CFD.
-                TODO: take from config
-                """
+
                 try:
                     return self.states.index(state)
                 except ValueError:
@@ -438,6 +435,18 @@ class JiraWrapper(object):
                 histogram = old_histogram.join(cycle_histogram, how='outer')
 
         return histogram
+
+    def totals(self):
+        """
+        What are current totals of work in our various states
+        """
+
+        # We can get this by doing a count of the last day of the CFD
+
+        cfd = self.cfd()
+
+        return None
+
 
 ###############################################################################
 # Internal methods

@@ -122,7 +122,13 @@ class TestGetMetrics(unittest.TestCase):
 
     # There are three sets of issues to match the three categories that get searched for in the tests
 
-    dummy_issues = {
+    default_queries = {"project = OPSTOOLS AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)": "Ops Tools",
+                       "project = Portal AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)": "Portal",
+                       "component = Report AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)": "Reports",
+                       "project = PORTAL-FAIL": "Demand Test",
+                       "totals_test": "totals_test"}
+
+    default_dummy_issues = {
         'Portal':   [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
                      MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
                      MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01')],
@@ -133,8 +139,29 @@ class TestGetMetrics(unittest.TestCase):
                      MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
                      MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01')],
         'Demand Test': [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2011-12-26'),
-                        MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-02')]
+                        MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-02')],
+        'totals_test':[MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2011-12-26')]
     }
+
+
+    def set_dummy_issues(self, issues=None, queries=None, config=None):
+        # If no issues are specified use the default set
+        if issues is not None:
+            self.dummy_issues = issues
+        else:
+            self.dummy_issues = self.default_dummy_issues
+
+        # If no queries are specified use the default mappings:
+        if queries is not None:
+            self.queries = queries
+        else:
+            self.queries = self.default_queries
+
+        if config is None:
+            config = self.jira_config
+
+        for category, query in config['categories'].iteritems():
+            self.queries[query] = category
 
     def serve_dummy_issues(self, *args, **kwargs):
 
@@ -150,10 +177,12 @@ class TestGetMetrics(unittest.TestCase):
                 category = 'Reports'
             elif args[0] == "project = PORTAL-FAIL":
                 category = 'Demand Test'
+            elif args[0] == 'totals_test':
+                category = 'totals_test'
             else:
                 print "Failed with:"
                 print args[0]
-                print self.jira_config['categories']
+                return None
 
         return self.dummy_issues[category]
 
@@ -161,6 +190,7 @@ class TestGetMetrics(unittest.TestCase):
 
         mock_jira_client = mock.Mock(spec=jira.client.JIRA)
         mock_jira_client.search_issues.side_effect = self.serve_dummy_issues
+        self.set_dummy_issues()
 
         self.patcher = mock.patch('jira.client')
         self.mock_jira = self.patcher.start()
@@ -790,17 +820,26 @@ class TestGetMetrics(unittest.TestCase):
         jira_config.pop('types', None)
         self.assertRaises(MissingConfigItem, JiraWrapper, config=jira_config)
 
-    @unittest.skip("Hang on whilst I add tests for Oauth")
+    @unittest.skip("Skipping so I can commit the mock refactoring")
     def testGetTotalsInStates(self):
         """
         We just want the headline figures on our WIP levels and queue lengths across the Project Portfolio.
         """
+
+        jira_config = copy.copy(self.jira_config)
+        jira_config['categories'] = {'totals_test': 'totals_test'}
+
+        our_jira = JiraWrapper(config=jira_config)
 
         expected = [
             {'Ops Tools': { 'queued': 10, 'in progress': 5, 'customer queue': 1},
              'Portal':    { 'queued':  0, 'in progress': 2, 'customer queue': 5},
              'Reports':   { 'queued':  2, 'in progress': 4, 'customer queue': 5}}
         ]
+
+        actual = our_jira.totals()
+
+        self.assertEqual(expected, actual)
 
     def testConfigureWithBasicAuth(self):
         """
