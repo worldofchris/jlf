@@ -3,6 +3,7 @@ from datetime import date, datetime
 """States between which we consider an issue to be being worked on
    for the purposes of calculating cycletime"""
 
+CREATED_STATE = 'Open'
 START_STATE = 'In Progress'
 END_STATE = 'Customer Approval'
 REOPENED_STATE = 'Reopened'
@@ -10,12 +11,21 @@ REOPENED_STATE = 'Reopened'
 def cycle_time(histories,
                start_state=START_STATE,
                end_state=END_STATE,
-               reopened_state=REOPENED_STATE):
+               exit_state=None,
+               reopened_state=REOPENED_STATE,
+               created_state=CREATED_STATE,
+               created_date=None):
 
     """Calculate how long it has taken an issue to get from START_STATE
-       to END_STATE"""
+       to END_STATE.  If we want to count from the date an issue was created
+       we need to specify the date the issue was created and the CREATED_STATE
+       if different from the default."""
 
-    start_date = None
+    if start_state == created_state:
+        start_date = created_date
+    else:
+        start_date = None
+
     end_date = None
 
     for history in histories:
@@ -42,21 +52,31 @@ def cycle_time(histories,
                         if new_start_date < start_date:
                             start_date = new_start_date
 
-                if item.toString == end_state:
+                if exit_state is not None:
 
-                    # We ignore transitions to end_state if
-                    # they are from reopened.
-                    # This is because we sometime have to re-open
-                    # tickets just to fix
-                    # details of ownership, component, type or resolution.
-                    if item.fromString != reopened_state:
+                    if item.fromString == exit_state:
                         end_date = datetime.strptime(history.created[:10],
                                                      '%Y-%m-%d')
+                else:
+                    if item.toString == end_state:
+
+                        # We ignore transitions to end_state if
+                        # they are from reopened.
+                        # This is because we sometime have to re-open
+                        # tickets just to fix
+                        # details of ownership, component, type or resolution.
+                        if item.fromString != reopened_state:
+                            end_date = datetime.strptime(history.created[:10],
+                                                         '%Y-%m-%d')
 
     if start_date is None or end_date is None:
         return None
 
-    return ((end_date - start_date).days) + 1
+    offset = 0
+    if exit_state is None:
+        offset = 1
+
+    return ((end_date - start_date).days) + offset
 
 
 def extract_date(created):

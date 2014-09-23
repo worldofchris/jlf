@@ -3,7 +3,7 @@ from jira_stats.history import cycle_time, time_in_states, arrivals
 from jira_stats.test.jira_mocks import mockHistory, mockItem, START_STATE, END_STATE, REOPENED_STATE
 
 import unittest
-from datetime import date
+from datetime import date, datetime
 
 
 class TestIssueHistory(unittest.TestCase):
@@ -37,6 +37,29 @@ class TestIssueHistory(unittest.TestCase):
                      mockHistory(u'2013-10-30T09:54:29.284+0000', [mockItem('status', REOPENED_STATE, END_STATE)])]
 
         self.assertEquals(cycle_time(histories), 3)
+
+    def testCycleStartsWithOpen(self):
+        """We need to be able to deal with workflows where there is no queue before work actually starts"""
+
+        histories = [mockHistory(u'2012-11-29T09:54:29.284+0000', [mockItem('status', 'Open', 'Awaiting Review')]),
+                     mockHistory(u'2012-11-30T09:54:29.284+0000', [mockItem('status', 'Awaiting Review', 'Reviewing')])]
+
+        self.assertEquals(cycle_time(histories, 
+                                     start_state='Open',
+                                     end_state='Reviewing',
+                                     created_date=datetime(2012, 11, 28)), 3)
+
+    def testCycleEndsWithExitingAState(self):
+        """In some workflows, the cycle we are interested in can end with a transition to more than one state so
+           we measure to the exit from the last state rather than the arrival at the end state."""
+
+        histories = [mockHistory(u'2012-11-18T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                     mockHistory(u'2012-11-28T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+                     mockHistory(u'2012-11-30T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])]
+
+        self.assertEquals(cycle_time(histories, 
+                                     exit_state=START_STATE,
+                                     created_date=datetime(2012, 11, 28)), 10)
 
     def testGetDaysInStates(self):
         """

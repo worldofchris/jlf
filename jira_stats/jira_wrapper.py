@@ -139,7 +139,7 @@ class JiraWrapper(object):
         df = pd.DataFrame(issue_rows)
         return df
 
-    def done(self):
+    def done(self, fields=None):
         """
         All issues that have been completed
         """
@@ -148,7 +148,12 @@ class JiraWrapper(object):
 
         issue_rows = self._issues_as_rows(self.done_issues) 
         df = pd.DataFrame(issue_rows)
-        return df
+
+        if fields is None:
+            return df
+        else:
+            return df.filter(fields)
+
 
     def history(self, from_date=None, until_date=None):
 
@@ -486,12 +491,23 @@ class JiraWrapper(object):
                     issue.category = category
                     try:
                         for cycle in self.cycles:
-                            setattr(issue,
-                                    cycle,
-                                    cycle_time(issue.changelog.histories,
-                                               start_state=self.cycles[cycle]['start'],
-                                               end_state=self.cycles[cycle]['end'],
-                                               reopened_state=self.cycles[cycle]['ignore']))
+                            reopened_state = None
+                            if 'ignore' in self.cycles[cycle]:
+                                reopened_state = self.cycles[cycle]['ignore']
+                            if 'exit' in self.cycles[cycle]:
+                                setattr(issue,
+                                            cycle,
+                                            cycle_time(issue.changelog.histories,
+                                                       start_state=self.cycles[cycle]['start'],
+                                                       exit_state=self.cycles[cycle]['exit'],
+                                                       reopened_state=reopened_state))
+                            else:
+                                setattr(issue,
+                                        cycle,
+                                        cycle_time(issue.changelog.histories,
+                                                   start_state=self.cycles[cycle]['start'],
+                                                   end_state=self.cycles[cycle]['end'],
+                                                   reopened_state=reopened_state))
 
                     except AttributeError:
 

@@ -85,6 +85,9 @@ def publish(config, jira, from_date, to_date):
         if report['metric'] == 'arrival-rate':
             data = jira.arrival_rate(from_date, to_date)
 
+        if report['metric'] == 'history':
+            data = jira.history(from_date, to_date)
+
         if data is not None:
             if isinstance(writer, pd.ExcelWriter):
 
@@ -114,6 +117,20 @@ def publish(config, jira, from_date, to_date):
 
                     colour_cfd(workbook, sheets[0], data, formats)
 
+                ### WARNING CUT AND PASTE ALERT!
+
+                if report['metric'] == 'history':
+                    if 'format' in report:
+                        formats = report['format']
+                    else:
+                        formats = format_states(config['states'])
+                    workbook = writer.book
+                    sheets = [sheet for sheet in workbook.worksheets() if sheet.name == 'history']
+                    # Do the colouring in
+
+                    colour_cfd(workbook, sheets[0], data, formats)
+
+
     if isinstance(writer, pd.ExcelWriter):
         writer.save()
 
@@ -125,7 +142,10 @@ def format_states(states):
         try:
             formats[state] = {'color': _state_default_colours[index]}
         except IndexError:
-            formats[state] = {'color': _state_default_colours[index - len(states)]}
+            rebased_index = index
+            while rebased_index >= len(_state_default_colours):
+                rebased_index = rebased_index - len(_state_default_colours)
+            formats[state] = {'color': _state_default_colours[rebased_index]}
 
     return formats
 

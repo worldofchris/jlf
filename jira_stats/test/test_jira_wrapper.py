@@ -21,898 +21,918 @@ import jira.client
 
 import os
 
+# Shell Mocks to deal with the indirection needed to get us down to the 
+# things we actually want to mock
+
 class MockProject(object):
 
-    def __init__(self, name):
-        self.name = name
+	def __init__(self, name):
+		self.name = name
 
 
 class MockIssueType(object):
 
-    def __init__(self, name):
-        self.name = name
+	def __init__(self, name):
+		self.name = name
 
 
 class MockStatus(object):
 
-    def __init__(self, name):
-        self.name = name
+	def __init__(self, name):
+		self.name = name
 
 
 class MockFields(object):
 
-    def __init__(self,
-                 resolutiondate,
-                 project_name,
-                 issuetype_name,
-                 created=None):
-        self.issuetype = MockIssueType(issuetype_name)
-        self.resolutiondate = resolutiondate
-        self.project = MockProject(project_name)
-        self.components = []
-        self.created = created
-        self.summary = None
-        self.status = MockStatus(name='In Progress')
+	def __init__(self,
+				 resolutiondate,
+				 project_name,
+				 issuetype_name,
+				 created=None):
+		self.issuetype = MockIssueType(issuetype_name)
+		self.resolutiondate = resolutiondate
+		self.project = MockProject(project_name)
+		self.components = []
+		self.created = created
+		self.summary = None
+		self.status = MockStatus(name='In Progress')
 
 
 class MockChangelog(object):
 
-    def __init__(self, histories):
-        self.histories = histories
+	def __init__(self, histories):
+		self.histories = histories
 
 
 class MockIssue(object):
 
-    def __init__(self,
-                 key,
-                 resolution_date,
-                 project_name,
-                 issuetype_name,
-                 created=None):
+	def __init__(self,
+				 key,
+				 resolution_date,
+				 project_name,
+				 issuetype_name,
+				 created=None):
 
-        self.key = key
-        self.fields = MockFields(resolution_date,
-                                 project_name,
-                                 issuetype_name,
-                                 created)
-        self.project = MockProject(project_name)
-        self.category = None
-        self.changelog = None
-        self.created = created
+		self.key = key
+		self.fields = MockFields(resolution_date,
+								 project_name,
+								 issuetype_name,
+								 created)
+		self.project = MockProject(project_name)
+		self.category = None
+		self.changelog = None
+		self.created = created
 
 
 class TestGetMetrics(unittest.TestCase):
 
-    categories = {
-        'Portal':  'project = Portal',
-        'Reports': 'component = Report',
-        'Ops Tools': 'project = OPSTOOLS'
-    }
-
-    cycles = {
-        "develop": {"start":  "In Progress",
-                    "end":    "Customer Approval",
-                    "ignore": "Reopened"},
-        "approve": {"start":  "In Progress",
-                    "end":    "Closed",
-                    "ignore": "Reopened"}
-    }
-
-    types = {
-        "value": ['Data Request', 'Improve Feature'],
-        "failure": ['Defect'],
-        "overhead": ['Task', 'Infrastructure']
-    }
-
-    ongoing = ["In Progress", "Awaiting Review", "Peer Review", "Awaiting Customer Approval", "Customer Approval"]
-    states = ['In Progress', 'pending','Customer Approval']
-
-    jira_config = {
-        'server': 'jiratron.worldofchris.com',
-        'authentication': {
-            'username': 'mrjira',
-            'password': 'foo'
-        },
-        'categories': categories,
-        'cycles': cycles,
-        'types': types,
-        'ongoing': ongoing,
-        'states': states
-    }
-
-    # There are three sets of issues to match the three categories that get searched for in the tests
-
-    default_queries = {"project = OPSTOOLS AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)": "Ops Tools",
-                       "project = Portal AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)": "Portal",
-                       "component = Report AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)": "Reports",
-                       "project = PORTAL-FAIL": "Demand Test",
-                       "totals_test": "totals_test"}
-
-    default_dummy_issues = {
-        'Portal':   [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
-                     MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
-                     MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01')],
-        'Reports':  [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Data Request', created='2012-01-01'),
-                     MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Improve Feature', created='2012-01-01'),
-                     MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Improve Feature', created='2012-01-01')],
-        'Ops Tools':[MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
-                     MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
-                     MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01')],
-        'Demand Test': [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2011-12-26'),
-                        MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-02')],
-        'totals_test':[MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2011-12-26')]
-    }
-
-
-    def set_dummy_issues(self, issues=None, queries=None, config=None):
-        # If no issues are specified use the default set
-        if issues is not None:
-            self.dummy_issues = issues
-        else:
-            self.dummy_issues = self.default_dummy_issues
-
-        # If no queries are specified use the default mappings:
-        if queries is not None:
-            self.queries = queries
-        else:
-            self.queries = self.default_queries
-
-        if config is None:
-            config = self.jira_config
-
-        for category, query in config['categories'].iteritems():
-            self.queries[query] = category
-
-    def serve_dummy_issues(self, *args, **kwargs):
-
-        try:
-            category = self.jira_config['categories'].keys()[self.jira_config['categories'].values().index(args[0])]
-            
-        except ValueError:
-            if args[0] == "project = OPSTOOLS AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)":
-                category = 'Ops Tools'
-            elif args[0] == "project = Portal AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)":
-                category = 'Portal'
-            elif args[0] == "component = Report AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)":
-                category = 'Reports'
-            elif args[0] == "project = PORTAL-FAIL":
-                category = 'Demand Test'
-            elif args[0] == 'totals_test':
-                category = 'totals_test'
-            else:
-                print "Failed with:"
-                print args[0]
-                return None
-
-        return self.dummy_issues[category]
-
-    def setUp(self):       
-
-        mock_jira_client = mock.Mock(spec=jira.client.JIRA)
-        mock_jira_client.search_issues.side_effect = self.serve_dummy_issues
-        self.set_dummy_issues()
+	categories = {
+		'Portal':  'project = Portal',
+		'Reports': 'component = Report',
+		'Ops Tools': 'project = OPSTOOLS'
+	}
+
+	cycles = {
+		"develop": {"start":  "In Progress",
+					"end":    "Customer Approval",
+					"ignore": "Reopened"},
+		"approve": {"start":  "In Progress",
+					"end":    "Closed",
+					"ignore": "Reopened"}
+	}
+
+	types = {
+		"value": ['Data Request', 'Improve Feature'],
+		"failure": ['Defect'],
+		"overhead": ['Task', 'Infrastructure']
+	}
+
+	ongoing = ["In Progress", "Awaiting Review", "Peer Review", "Awaiting Customer Approval", "Customer Approval"]
+	states = ['In Progress', 'pending','Customer Approval']
+
+	jira_config = {
+		'server': 'jiratron.worldofchris.com',
+		'authentication': {
+			'username': 'mrjira',
+			'password': 'foo'
+		},
+		'categories': categories,
+		'cycles': cycles,
+		'types': types,
+		'ongoing': ongoing,
+		'states': states
+	}
+
+	# There are three sets of issues to match the three categories that get searched for in the tests
+
+	default_queries = {"project = OPSTOOLS AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)": "Ops Tools",
+					   "project = Portal AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)": "Portal",
+					   "component = Report AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)": "Reports",
+					   "project = PORTAL-FAIL": "Demand Test",
+					   "totals_test": "totals_test"}
+
+	default_dummy_issues = {
+		'Portal':   [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
+					 MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
+					 MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01')],
+		'Reports':  [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Data Request', created='2012-01-01'),
+					 MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Improve Feature', created='2012-01-01'),
+					 MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Improve Feature', created='2012-01-01')],
+		'Ops Tools':[MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
+					 MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-01'),
+					 MockIssue(key='PORTAL-3', resolution_date='2012-10-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01')],
+		'Demand Test': [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2011-12-26'),
+						MockIssue(key='PORTAL-2', resolution_date='2012-11-12', project_name='Portal', issuetype_name='Defect', created='2012-01-02')],
+		'totals_test':[MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2011-12-26')]
+	}
+
+
+	def set_dummy_issues(self, issues=None, queries=None, config=None):
+		# If no issues are specified use the default set
+		if issues is not None:
+			self.dummy_issues = issues
+		else:
+			self.dummy_issues = self.default_dummy_issues
+
+		# If no queries are specified use the default mappings:
+		if queries is not None:
+			self.queries = queries
+		else:
+			self.queries = self.default_queries
+
+		if config is None:
+			config = self.jira_config
+
+		for category, query in config['categories'].iteritems():
+			self.queries[query] = category
+
+	def serve_dummy_issues(self, *args, **kwargs):
+
+		category = None
+
+		try:
+			category = self.queries[args[0]]
+
+		except ValueError:
+			print "Failed with:"
+			print args[0]
+			return None
+
+		return self.dummy_issues[category]
+
+	def setUp(self):       
+
+		mock_jira_client = mock.Mock(spec=jira.client.JIRA)
+		mock_jira_client.search_issues.side_effect = self.serve_dummy_issues
+		self.set_dummy_issues()
+
+		self.patcher = mock.patch('jira.client')
+		self.mock_jira = self.patcher.start()
+		self.mock_jira.JIRA.return_value = mock_jira_client
+
+	def tearDown(self):
+		self.patcher.stop()
+
+	def testGetCumulativeThroughputTable(self):
+		"""
+		The Cumulative Throughput Table is what we use to create the graph in
+		Excel
+		"""
+
+		expected = {'Ops Tools': pd.Series([np.int64(1),
+											np.int64(1),
+											np.int64(1),
+											np.int64(1),
+											np.int64(2),
+											np.int64(3)],
+											index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']),
+					'Portal':    pd.Series([np.int64(1),
+											np.int64(1),
+											np.int64(1),
+											np.int64(1),
+											np.int64(2),
+											np.int64(3)],
+											index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']),
+					'Reports':   pd.Series([np.int64(1),
+											np.int64(1),
+											np.int64(1),
+											np.int64(1),
+											np.int64(2),
+											np.int64(3)],
+											index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
 
-        self.patcher = mock.patch('jira.client')
-        self.mock_jira = self.patcher.start()
-        self.mock_jira.JIRA.return_value = mock_jira_client
+		expected_frame = pd.DataFrame(expected)
 
-    def tearDown(self):
-        self.patcher.stop()
+		expected_frame.index.name = 'week'
+		expected_frame.columns.name = 'swimlane'
 
-    def testGetCumulativeThroughputTable(self):
-        """
-        The Cumulative Throughput Table is what we use to create the graph in
-        Excel
-        """
+		our_jira = JiraWrapper(config=self.jira_config)
 
-        expected = {'Ops Tools': pd.Series([np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(2),
-                                            np.int64(3)],
-                                            index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']),
-                    'Portal':    pd.Series([np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(2),
-                                            np.int64(3)],
-                                            index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']),
-                    'Reports':   pd.Series([np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(2),
-                                            np.int64(3)],
-                                            index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
+		actual_frame = our_jira.throughput(cumulative=True,
+										   from_date=date(2012, 01, 01),
+										   to_date=date(2012, 12, 31))
 
-        expected_frame = pd.DataFrame(expected)
 
-        expected_frame.index.name = 'week'
-        expected_frame.columns.name = 'swimlane'
+		assert_frame_equal(actual_frame.astype(np.int64), expected_frame), actual_frame
 
-        our_jira = JiraWrapper(config=self.jira_config)
 
-        actual_frame = our_jira.throughput(cumulative=True,
-                                           from_date=date(2012, 01, 01),
-                                           to_date=date(2012, 12, 31))
+	def testGetThroughputMultipleCategories(self):
+		"""
+		The Cumulative Throughput Table is what we use to create the graph in
+		Excel
+		"""
 
+		our_jira = JiraWrapper(config=self.jira_config)
 
-        assert_frame_equal(actual_frame.astype(np.int64), expected_frame), actual_frame
+		expected_1 = {'Ops Tools': pd.Series([np.int64(1),
+											np.int64(1),
+											np.int64(1),
+											np.int64(1),
+											np.int64(2),
+											np.int64(3)],
+											index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
 
+		expected_frame_1 = pd.DataFrame(expected_1)
 
-    def testGetThroughputMultipleCategories(self):
-        """
-        The Cumulative Throughput Table is what we use to create the graph in
-        Excel
-        """
+		expected_frame_1.index.name = 'week'
+		expected_frame_1.columns.name = 'swimlane'
 
-        our_jira = JiraWrapper(config=self.jira_config)
+		actual_frame_1 = our_jira.throughput(cumulative=True,
+											 from_date=date(2012, 01, 01),
+											 to_date=date(2012, 12, 31),
+											 category="Ops Tools")
 
-        expected_1 = {'Ops Tools': pd.Series([np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(2),
-                                            np.int64(3)],
-                                            index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
+		assert_frame_equal(actual_frame_1.astype(np.int64), expected_frame_1), actual_frame_1
+
+		expected_2 = {'Portal':    pd.Series([np.int64(1),
+											  np.int64(1),
+											  np.int64(1),
+											  np.int64(1),
+											  np.int64(2),
+											  np.int64(3)],
+											  index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
+
+		expected_frame_2 = pd.DataFrame(expected_2)
+
+		expected_frame_2.index.name = 'week'
+		expected_frame_2.columns.name = 'swimlane'
+
+		actual_frame_2 = our_jira.throughput(cumulative=True,
+											 from_date=date(2012, 01, 01),
+											 to_date=date(2012, 12, 31),
+											 category="Portal")
 
-        expected_frame_1 = pd.DataFrame(expected_1)
+		assert_frame_equal(actual_frame_2.astype(np.int64), expected_frame_2), actual_frame_2
 
-        expected_frame_1.index.name = 'week'
-        expected_frame_1.columns.name = 'swimlane'
 
-        actual_frame_1 = our_jira.throughput(cumulative=True,
-                                             from_date=date(2012, 01, 01),
-                                             to_date=date(2012, 12, 31),
-                                             category="Ops Tools")
+	def testFillInTheBlanks(self):
+		"""
+		If we didn't complete any work in a given week then we will have a missing row in our data frame.
+		This is going to make the graph inconsistent so we re-index to add in the missing weeks.
+		"""
 
-        assert_frame_equal(actual_frame_1.astype(np.int64), expected_frame_1), actual_frame_1
+		expected = {'Ops Tools': pd.Series([np.int64(1), np.int64(2), np.int64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12']),
+					'Portal':    pd.Series([np.int64(1), np.int64(2), np.int64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12']),
+					'Reports':   pd.Series([np.int64(1), np.int64(2), np.int64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12'])}
 
-        expected_2 = {'Portal':    pd.Series([np.int64(1),
-                                              np.int64(1),
-                                              np.int64(1),
-                                              np.int64(1),
-                                              np.int64(2),
-                                              np.int64(3)],
-                                              index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
+		expected_frame = pd.DataFrame(expected)
+		actual_index = fill_date_index_blanks(expected_frame.index)
 
-        expected_frame_2 = pd.DataFrame(expected_2)
+		expected_index = ['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']
 
-        expected_frame_2.index.name = 'week'
-        expected_frame_2.columns.name = 'swimlane'
+		assert actual_index == expected_index, actual_index
 
-        actual_frame_2 = our_jira.throughput(cumulative=True,
-                                             from_date=date(2012, 01, 01),
-                                             to_date=date(2012, 12, 31),
-                                             category="Portal")
 
-        assert_frame_equal(actual_frame_2.astype(np.int64), expected_frame_2), actual_frame_2
+	def testFillInTheBlanksOverYearEnd(self):
+		"""
+		This is not working for the week commencing 2013-12-30.
+		"""
 
+		expected = {'bi-value': pd.Series([np.int64(1)], index=['2013-12-30'])}
 
-    def testFillInTheBlanks(self):
-        """
-        If we didn't complete any work in a given week then we will have a missing row in our data frame.
-        This is going to make the graph inconsistent so we re-index to add in the missing weeks.
-        """
+		expected_frame = pd.DataFrame(expected)
+		actual_index = fill_date_index_blanks(expected_frame.index)
 
-        expected = {'Ops Tools': pd.Series([np.int64(1), np.int64(2), np.int64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12']),
-                    'Portal':    pd.Series([np.int64(1), np.int64(2), np.int64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12']),
-                    'Reports':   pd.Series([np.int64(1), np.int64(2), np.int64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12'])}
+		expected_index = ['2013-12-30']
 
-        expected_frame = pd.DataFrame(expected)
-        actual_index = fill_date_index_blanks(expected_frame.index)
+		self.assertEqual(actual_index, expected_index)
 
-        expected_index = ['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']
 
-        assert actual_index == expected_index, actual_index
+	def testGetWeekIdentifier(self):
+		"""
+		We graph throughput on a weekly basis so for a given issue we need to know which week it was completed in.
+		"""
 
+		issues = [{'year': 2012, 'week': 1, 'week_start': date(2012, 01, 02)}]
 
-    def testFillInTheBlanksOverYearEnd(self):
-        """
-        This is not working for the week commencing 2013-12-30.
-        """
+		for issue in issues:
+			actual_week_start = week_start_date(issue['year'], issue['week'])
+			assert issue['week_start'] == actual_week_start, actual_week_start
 
-        expected = {'bi-value': pd.Series([np.int64(1)], index=['2013-12-30'])}
 
-        expected_frame = pd.DataFrame(expected)
-        actual_index = fill_date_index_blanks(expected_frame.index)
+	def testGetDifferentWorkTypes(self):
+		"""
+		In order to see how our throughput is split across value work, failure work and operational
+		overhead we want to be able to specify the work type we are interested in when we ask for throughput.
+		"""
 
-        expected_index = ['2013-12-30']
+		unstub()
+		# Given these issue in Jira
 
-        self.assertEqual(actual_index, expected_index)
+		# For our test data we want to cover value and failure demand and operational overhead.
+		# We are only interested in the week that each issue was resolved.
 
+		issue_types = {'Defect':          ['2012-10-08',
+										   '2012-10-15',
+										   '2012-10-22', '2012-10-22',
+										   '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29',
+										   '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05',
+										   '2012-11-12'],
+					   'Task':            ['2012-10-08',
+										   '2012-10-15', '2012-10-15',
+										   '2012-10-22', '2012-10-22', '2012-10-22',
+										   '2012-10-29',
+										   '2012-11-05', '2012-11-05', '2012-11-05',
+										   '2012-11-12', '2012-11-12'],
+					   'Improve Feature': ['2012-10-08',
+										   '2012-10-15', '2012-10-15', '2012-10-15', '2012-10-15', '2012-10-15',
+										   '2012-10-22', '2012-10-22', '2012-10-22', '2012-10-22', '2012-10-22', '2012-10-22', '2012-10-22',
+										   '2012-10-29', '2012-10-29',
+										   '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05',
+										   '2012-11-12', '2012-11-12', '2012-11-12', '2012-11-12', '2012-11-12', '2012-11-12']}
 
-    def testGetWeekIdentifier(self):
-        """
-        We graph throughput on a weekly basis so for a given issue we need to know which week it was completed in.
-        """
+		dummy_issues = []
+		n = 0
 
-        issues = [{'year': 2012, 'week': 1, 'week_start': date(2012, 01, 02)}]
+		for issue_type in issue_types:
+			for resolved in issue_types[issue_type]:
+				dummy_issues.append(MockIssue(key='PORTAL-{n}'.format(n=n),
+											  resolution_date=resolved,
+											  project_name='Portal',
+											  issuetype_name=issue_type,
+											  created='2012-01-01'))
+				n += 1
+
+		mock_jira = jira.client.JIRA()
+
+		when(mock_jira).search_issues(any(),
+									  startAt=any(),
+									  maxResults=any()).thenReturn(dummy_issues)
+
+		when(jira.client).JIRA(any(), basic_auth=any()).thenReturn(mock_jira)
+
+
+
+		expected = {'PORTAL-value':    pd.Series([ np.int64(1),  np.int64(5),  np.int64(7),  np.int64(2),   np.int64(6),  np.int64(6)],
+										   index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29',  '2012-11-05', '2012-11-12']),
+					'PORTAL-failure':  pd.Series([ np.int64(1),  np.int64(1),  np.int64(2),  np.int64(10),  np.int64(4),  np.int64(1)],
+										   index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29',  '2012-11-05', '2012-11-12']),
+					'PORTAL-overhead': pd.Series([ np.int64(1),  np.int64(2),  np.int64(3),  np.int64(1),   np.int64(3),  np.int64(2)],
+										   index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29',  '2012-11-05', '2012-11-12'])}
+
+		expected_frame = pd.DataFrame(expected)
+		expected_frame.index.name = 'week'
+		expected_frame.columns.name = 'swimlane'
+
+		# We are only test one category here so override the default test config
+		jira_config = copy.copy(self.jira_config)
+		jira_config['categories'] = {'PORTAL': 'project = PORTAL'}
+
+		our_jira = JiraWrapper(config=jira_config)
+
+		# We typically are not interested in this data cumulatively as we want to compare how we are split on a week by week basis
+
+		actual_frame = our_jira.throughput(cumulative=False,
+										   from_date=date(2012, 01, 01),
+										   to_date=date(2012, 12, 31),
+										   types=["value", "failure", "overhead"])
+
+		assert_frame_equal(actual_frame, expected_frame), actual_frame
+
+	def testGetFailureDemandCreatedOverTime(self):
+
+		"""
+		How much failure demand are we creating?  Is it going up or down?
+		"""
+
+		# We are only test one category here so override the default test config
+		jira_config = copy.copy(self.jira_config)
+		jira_config['categories'] = {'Demand Test': 'project = PORTAL-FAIL'}
+
+		expected = {'Demand Test-failure': pd.Series([np.int64(1),
+									  np.int64(1)],
+									  index=['2011-12-26', '2012-01-02'])}
+
+		expected_frame = pd.DataFrame(expected)
+		expected_frame.index.name = 'week_created'
+		expected_frame.columns.name = 'swimlane'
+
+		our_jira = JiraWrapper(config=jira_config)
+
+		actual_frame = our_jira.demand(from_date=date(2012, 01, 01),
+									   to_date=date(2012, 12, 31),
+									   types=["failure"])
+
+
+		assert_frame_equal(actual_frame, expected_frame), actual_frame
+
+		# needs to deal with blanks!
+
+	def testGetMitchells(self):
+
+		"""
+		After Benjamin Mitchell's item history tracking:
+		http://blog.benjaminm.net/2012/06/26/how-to-study-the-flow-or-work-with-kanban-cards
+		"""
+
+		expected = {'PORTAL-1': pd.Series(['In Progress',
+										   'In Progress',
+										   'pending',
+										   'pending',
+										   'pending',
+										   'pending',
+										   'Customer Approval'], 
+										  index=pd.to_datetime(['2012-01-01',
+												 '2012-01-02',
+												 '2012-01-03',
+												 '2012-01-04',
+												 '2012-01-05',
+												 '2012-01-06',
+												 '2012-01-07'])),
+					'PORTAL-2': pd.Series(['In Progress',
+										   'In Progress',
+										   'In Progress',
+										   'pending',
+										   'pending',
+										   'Customer Approval',
+										   'Customer Approval'], 
+										  index=pd.to_datetime(['2012-01-01',
+												 '2012-01-02',
+												 '2012-01-03',
+												 '2012-01-04',
+												 '2012-01-05',
+												 '2012-01-06',
+												 '2012-01-07'])),
+					'PORTAL-3': pd.Series(['In Progress',
+										   'In Progress',
+										   'In Progress',
+										   'In Progress',
+										   'In Progress',
+										   'pending',
+										   'Customer Approval'], 
+										  index=pd.to_datetime(['2012-01-01',
+												 '2012-01-02',
+												 '2012-01-03',
+												 '2012-01-04',
+												 '2012-01-05',
+												 '2012-01-06',
+												 '2012-01-07']))}
 
-        for issue in issues:
-            actual_week_start = week_start_date(issue['year'], issue['week'])
-            assert issue['week_start'] == actual_week_start, actual_week_start
+		for dummy_issue in self.dummy_issues['Ops Tools']:
+			dummy_issue.changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+												   mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+												   mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
+		for dummy_issue in self.dummy_issues['Portal']:
+			dummy_issue.changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+												   mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+												   mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-    def testGetDifferentWorkTypes(self):
-        """
-        In order to see how our throughput is split across value work, failure work and operational
-        overhead we want to be able to specify the work type we are interested in when we ask for throughput.
-        """
+		self.dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+														  mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+														  mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-        unstub()
-        # Given these issue in Jira
+		self.dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+														  mockHistory(u'2012-01-04T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+														  mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-        # For our test data we want to cover value and failure demand and operational overhead.
-        # We are only interested in the week that each issue was resolved.
+		self.dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+														  mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+														  mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-        issue_types = {'Defect':          ['2012-10-08',
-                                           '2012-10-15',
-                                           '2012-10-22', '2012-10-22',
-                                           '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29', '2012-10-29',
-                                           '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05',
-                                           '2012-11-12'],
-                       'Task':            ['2012-10-08',
-                                           '2012-10-15', '2012-10-15',
-                                           '2012-10-22', '2012-10-22', '2012-10-22',
-                                           '2012-10-29',
-                                           '2012-11-05', '2012-11-05', '2012-11-05',
-                                           '2012-11-12', '2012-11-12'],
-                       'Improve Feature': ['2012-10-08',
-                                           '2012-10-15', '2012-10-15', '2012-10-15', '2012-10-15', '2012-10-15',
-                                           '2012-10-22', '2012-10-22', '2012-10-22', '2012-10-22', '2012-10-22', '2012-10-22', '2012-10-22',
-                                           '2012-10-29', '2012-10-29',
-                                           '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05',
-                                           '2012-11-12', '2012-11-12', '2012-11-12', '2012-11-12', '2012-11-12', '2012-11-12']}
+		our_jira = JiraWrapper(config=self.jira_config)
+		expected_frame = pd.DataFrame(expected)
 
-        dummy_issues = []
-        n = 0
+		actual_frame = our_jira.history(until_date=date(2012, 1, 8))
 
-        for issue_type in issue_types:
-            for resolved in issue_types[issue_type]:
-                dummy_issues.append(MockIssue(key='PORTAL-{n}'.format(n=n),
-                                              resolution_date=resolved,
-                                              project_name='Portal',
-                                              issuetype_name=issue_type,
-                                              created='2012-01-01'))
-                n += 1
+		assert_frame_equal(actual_frame, expected_frame), actual_frame
+
 
-        mock_jira = jira.client.JIRA()
-
-        when(mock_jira).search_issues(any(),
-                                      startAt=any(),
-                                      maxResults=any()).thenReturn(dummy_issues)
-
-        when(jira.client).JIRA(any(), basic_auth=any()).thenReturn(mock_jira)
-
-
-
-        expected = {'PORTAL-value':    pd.Series([ np.int64(1),  np.int64(5),  np.int64(7),  np.int64(2),   np.int64(6),  np.int64(6)],
-                                           index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29',  '2012-11-05', '2012-11-12']),
-                    'PORTAL-failure':  pd.Series([ np.int64(1),  np.int64(1),  np.int64(2),  np.int64(10),  np.int64(4),  np.int64(1)],
-                                           index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29',  '2012-11-05', '2012-11-12']),
-                    'PORTAL-overhead': pd.Series([ np.int64(1),  np.int64(2),  np.int64(3),  np.int64(1),   np.int64(3),  np.int64(2)],
-                                           index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29',  '2012-11-05', '2012-11-12'])}
-
-        expected_frame = pd.DataFrame(expected)
-        expected_frame.index.name = 'week'
-        expected_frame.columns.name = 'swimlane'
-
-        # We are only test one category here so override the default test config
-        jira_config = copy.copy(self.jira_config)
-        jira_config['categories'] = {'PORTAL': 'project = PORTAL'}
-
-        our_jira = JiraWrapper(config=jira_config)
-
-        # We typically are not interested in this data cumulatively as we want to compare how we are split on a week by week basis
-
-        actual_frame = our_jira.throughput(cumulative=False,
-                                           from_date=date(2012, 01, 01),
-                                           to_date=date(2012, 12, 31),
-                                           types=["value", "failure", "overhead"])
-
-        assert_frame_equal(actual_frame, expected_frame), actual_frame
-
-    def testGetFailureDemandCreatedOverTime(self):
-
-        """
-        How much failure demand are we creating?  Is it going up or down?
-        """
-
-        # We are only test one category here so override the default test config
-        jira_config = copy.copy(self.jira_config)
-        jira_config['categories'] = {'Demand Test': 'project = PORTAL-FAIL'}
-
-        expected = {'Demand Test-failure': pd.Series([np.int64(1),
-                                      np.int64(1)],
-                                      index=['2011-12-26', '2012-01-02'])}
-
-        expected_frame = pd.DataFrame(expected)
-        expected_frame.index.name = 'week_created'
-        expected_frame.columns.name = 'swimlane'
-
-        our_jira = JiraWrapper(config=jira_config)
-
-        actual_frame = our_jira.demand(from_date=date(2012, 01, 01),
-                                       to_date=date(2012, 12, 31),
-                                       types=["failure"])
-
-
-        assert_frame_equal(actual_frame, expected_frame), actual_frame
-
-        # needs to deal with blanks!
-
-    def testGetMitchells(self):
-
-        """
-        After Benjamin Mitchell's item history tracking:
-        http://blog.benjaminm.net/2012/06/26/how-to-study-the-flow-or-work-with-kanban-cards
-        """
-
-        expected = {'PORTAL-1': pd.Series(['In Progress',
-                                           'In Progress',
-                                           'pending',
-                                           'pending',
-                                           'pending',
-                                           'pending',
-                                           'Customer Approval'], 
-                                          index=pd.to_datetime(['2012-01-01',
-                                                 '2012-01-02',
-                                                 '2012-01-03',
-                                                 '2012-01-04',
-                                                 '2012-01-05',
-                                                 '2012-01-06',
-                                                 '2012-01-07'])),
-                    'PORTAL-2': pd.Series(['In Progress',
-                                           'In Progress',
-                                           'In Progress',
-                                           'pending',
-                                           'pending',
-                                           'Customer Approval',
-                                           'Customer Approval'], 
-                                          index=pd.to_datetime(['2012-01-01',
-                                                 '2012-01-02',
-                                                 '2012-01-03',
-                                                 '2012-01-04',
-                                                 '2012-01-05',
-                                                 '2012-01-06',
-                                                 '2012-01-07'])),
-                    'PORTAL-3': pd.Series(['In Progress',
-                                           'In Progress',
-                                           'In Progress',
-                                           'In Progress',
-                                           'In Progress',
-                                           'pending',
-                                           'Customer Approval'], 
-                                          index=pd.to_datetime(['2012-01-01',
-                                                 '2012-01-02',
-                                                 '2012-01-03',
-                                                 '2012-01-04',
-                                                 '2012-01-05',
-                                                 '2012-01-06',
-                                                 '2012-01-07']))}
+	def testCreateCFD(self):
+		"""
+		If we sort the Mitchells by day and then by state then we get a
+		Cumulative Flow Diagram
+		"""
+
+		for dummy_issue in self.dummy_issues['Ops Tools']:
+			dummy_issue.changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+												   mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+												   mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-        for dummy_issue in self.dummy_issues['Ops Tools']:
-            dummy_issue.changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
-                                                   mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                                                   mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+		for dummy_issue in self.dummy_issues['Portal']:
+			dummy_issue.changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+												   mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+												   mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-        for dummy_issue in self.dummy_issues['Portal']:
-            dummy_issue.changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
-                                                   mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                                                   mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+		self.dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+																   mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+																   mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-        self.dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
-                                                          mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                                                          mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+		self.dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+																   mockHistory(u'2012-01-04T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+																   mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-        self.dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
-                                                          mockHistory(u'2012-01-04T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                                                          mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+		self.dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+																   mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+																   mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-        self.dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
-                                                          mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                                                          mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+		expected = {pd.to_datetime('2012-01-01'): pd.Series([START_STATE, START_STATE, START_STATE], index=[0, 1, 2]),
+					pd.to_datetime('2012-01-02'): pd.Series([START_STATE, START_STATE, START_STATE], index=[0, 1, 2]),
+					pd.to_datetime('2012-01-03'): pd.Series([START_STATE, START_STATE, 'pending'], index=[0, 1, 2]),
+					pd.to_datetime('2012-01-04'): pd.Series([START_STATE, 'pending', 'pending'], index=[0, 1, 2]),
+					pd.to_datetime('2012-01-05'): pd.Series([START_STATE, 'pending', 'pending'], index=[0, 1, 2]),
+					pd.to_datetime('2012-01-06'): pd.Series(['pending', 'pending', 'Customer Approval'], index=[0, 1, 2]),
+					pd.to_datetime('2012-01-07'): pd.Series(['Customer Approval', 'Customer Approval', 'Customer Approval'], index=[0, 1, 2])}
 
-        our_jira = JiraWrapper(config=self.jira_config)
-        expected_frame = pd.DataFrame(expected)
+		our_jira = JiraWrapper(config=self.jira_config)
 
-        actual_frame = our_jira.history(until_date=date(2012, 1, 8))
+		expected_frame = pd.DataFrame(expected)
 
-        assert_frame_equal(actual_frame, expected_frame), actual_frame
+		actual_frame = our_jira.cfd(until_date=date(2012, 1, 8))
+		# actual_frame = our_jira._issues_from_jira()
 
+		assert_frame_equal(actual_frame, expected_frame), actual_frame
 
-    def testCreateCFD(self):
-        """
-        If we sort the Mitchells by day and then by state then we get a
-        Cumulative Flow Diagram
-        """
 
-        for dummy_issue in self.dummy_issues['Ops Tools']:
-            dummy_issue.changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
-                                                   mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                                                   mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-        for dummy_issue in self.dummy_issues['Portal']:
-            dummy_issue.changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
-                                                   mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                                                   mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+	  # Test get done_value - done_value = our_jira.done[our_jira.done['type'].isin(["New Feature", "Story", "Improvement"])]
 
-        self.dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
-                                                                   mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                                                                   mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-        self.dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
-                                                                   mockHistory(u'2012-01-04T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                                                                   mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+	def testGetArrivalRate(self):
+		"""
+		What rate does work transition into a specific state?
+		e.g. arrive at the customer review queue.
 
-        self.dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
-                                                                   mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                                                                   mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+		This is to deal with situations where work is not being closed and so does not have a resoultion date and
+		so cannot be counted towards throughput
+		"""
 
-        expected = {pd.to_datetime('2012-01-01'): pd.Series([START_STATE, START_STATE, START_STATE], index=[0, 1, 2]),
-                    pd.to_datetime('2012-01-02'): pd.Series([START_STATE, START_STATE, START_STATE], index=[0, 1, 2]),
-                    pd.to_datetime('2012-01-03'): pd.Series([START_STATE, START_STATE, 'pending'], index=[0, 1, 2]),
-                    pd.to_datetime('2012-01-04'): pd.Series([START_STATE, 'pending', 'pending'], index=[0, 1, 2]),
-                    pd.to_datetime('2012-01-05'): pd.Series([START_STATE, 'pending', 'pending'], index=[0, 1, 2]),
-                    pd.to_datetime('2012-01-06'): pd.Series(['pending', 'pending', 'Customer Approval'], index=[0, 1, 2]),
-                    pd.to_datetime('2012-01-07'): pd.Series(['Customer Approval', 'Customer Approval', 'Customer Approval'], index=[0, 1, 2])}
+		our_jira = JiraWrapper(config=self.jira_config)
 
-        our_jira = JiraWrapper(config=self.jira_config)
+		# Set up the dummy issue history to give us our expected arrival rate
 
-        expected_frame = pd.DataFrame(expected)
+		for dummy_issue in self.dummy_issues['Ops Tools']:
+			dummy_issue.changelog = None
 
-        actual_frame = our_jira.cfd(until_date=date(2012, 1, 8))
-        # actual_frame = our_jira._issues_from_jira()
+		for dummy_issue in self.dummy_issues['Portal']:
+			dummy_issue.changelog = None
 
-        assert_frame_equal(actual_frame, expected_frame), actual_frame
+		for dummy_issue in self.dummy_issues['Reports']:
+			dummy_issue.changelog = None
 
+		self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'QA Queue')]),
+														  mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'QA Queue', 'Customer Approval')])])
 
+		expected = {
+			pd.to_datetime('2012-01-02'): {'QA Queue': np.int64(1), 'Customer Approval': np.int64(1)}
+		}
 
-      # Test get done_value - done_value = our_jira.done[our_jira.done['type'].isin(["New Feature", "Story", "Improvement"])]
+		expected_frame = pd.DataFrame.from_dict(expected, orient='index').sort_index(axis=1)
+		actual_frame = our_jira.arrival_rate(date(2012,1,1), date(2012,1,3)).sort_index(axis=1)
 
+		assert_frame_equal(actual_frame.astype(np.int64), expected_frame), actual_frame
 
-    def testGetArrivalRate(self):
-        """
-        What rate does work transition into a specific state?
-        e.g. arrive at the customer review queue.
+	@unittest.skip("This is hard coded now as only needed on one project")
+	def testGetCustomFields(self):
+		# To get custom fields you need to know what they are called
+		# by looking thme up in https://instance/rest/api/2/field
+		# e.g.
+		# {"id":"customfield_10002","name":"Story Points","custom":true,"orderable":true,"navigable":true,"searchable":true,"schema":{"type":"number","custom":"com.atlassian.jira.plugin.system.customfieldtypes:float","customId":10002}},{"id":"customfield_10003","name":"Business Value","custom":true,"orderable":true,"navigable":true,"searchable":true,"schema":{"type":"number","custom":"com.atlassian.jira.plugin.system.customfieldtypes:float","customId":10003}}
+		# These are going to need to be specified in the config file and mapped to their internal Jira names
+		# MVP would be for this mapping to be provided in the config file
+		pass
 
-        This is to deal with situations where work is not being closed and so does not have a resoultion date and
-        so cannot be counted towards throughput
-        """
+	@unittest.skip("Needs to decide what to use in lieu of resolution date if 'done' is transition to another state - e.g. 'In Production'")
+	def testSpecifyDoneState(self):
+		# Depending on the workflow 'Done' will have a different definition - i.e. is it 'Done', 'Closed', 'Resolved' etc
+		pass
 
-        our_jira = JiraWrapper(config=self.jira_config)
+	def testGetSingleCycleAsHistogram(self):
+		"""
+		Get Cycle Time as Histogram for a single cycle
+		"""
 
-        # Set up the dummy issue history to give us our expected arrival rate
+		# We need some issues with start and end dates that fall into different buckets
+		# TODO: Refactor this to remove duplication in other tests
 
-        for dummy_issue in self.dummy_issues['Ops Tools']:
-            dummy_issue.changelog = None
+		for dummy_issue in self.dummy_issues['Ops Tools']:
+			dummy_issue.changelog = None
 
-        for dummy_issue in self.dummy_issues['Portal']:
-            dummy_issue.changelog = None
+		for dummy_issue in self.dummy_issues['Portal']:
+			dummy_issue.changelog = None
 
-        for dummy_issue in self.dummy_issues['Reports']:
-            dummy_issue.changelog = None
+		for dummy_issue in self.dummy_issues['Reports']:
+			dummy_issue.changelog = None
 
-        self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'QA Queue')]),
-                                                          mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'QA Queue', 'Customer Approval')])])
+		# 0-5
 
-        expected = {
-            pd.to_datetime('2012-01-02'): {'QA Queue': np.int64(1), 'Customer Approval': np.int64(1)}
-        }
+		self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        expected_frame = pd.DataFrame.from_dict(expected, orient='index').sort_index(axis=1)
-        actual_frame = our_jira.arrival_rate(date(2012,1,1), date(2012,1,3)).sort_index(axis=1)
 
-        assert_frame_equal(actual_frame.astype(np.int64), expected_frame), actual_frame
+		self.dummy_issues['Ops Tools'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-    @unittest.skip("We need to be able to deal with workflows where there is no queue before work actually starts")
-    def testCycleStartsWithOpen(self):
-        pass
+		# 6-10
 
+		self.dummy_issues['Ops Tools'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-    @unittest.skip("Warning Yak Shaving Ahead")
-    def testGetCustomFields(self):
-        # To get custom fields you need to know what they are called
-        # by looking thme up in https://instance/rest/api/2/field
-        # e.g.
-        # {"id":"customfield_10002","name":"Story Points","custom":true,"orderable":true,"navigable":true,"searchable":true,"schema":{"type":"number","custom":"com.atlassian.jira.plugin.system.customfieldtypes:float","customId":10002}},{"id":"customfield_10003","name":"Business Value","custom":true,"orderable":true,"navigable":true,"searchable":true,"schema":{"type":"number","custom":"com.atlassian.jira.plugin.system.customfieldtypes:float","customId":10003}}
-        # These are going to need to be specified in the config file and mapped to their internal Jira names
-        # MVP would be for this mapping to be provided in the config file
-        pass
+		self.dummy_issues['Portal'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-    @unittest.skip("Pass the clippers")
-    def testSpecifyDoneState(self):
-        # Depending on the workflow 'Done' will have a different definition - i.e. is it 'Done', 'Closed', 'Resolved' etc
-        pass
+		self.dummy_issues['Portal'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-08T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-    def testGetSingleCycleAsHistogram(self):
-        """
-        Get Cycle Time as Histogram for a single cycle
-        """
+		self.dummy_issues['Portal'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-09T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        # We need some issues with start and end dates that fall into different buckets
-        # TODO: Refactor this to remove duplication in other tests
+		self.dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-09T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        for dummy_issue in self.dummy_issues['Ops Tools']:
-            dummy_issue.changelog = None
+		self.dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-10T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        for dummy_issue in self.dummy_issues['Portal']:
-            dummy_issue.changelog = None
 
-        for dummy_issue in self.dummy_issues['Reports']:
-            dummy_issue.changelog = None
+		# 11-20
 
-        # 0-5
+		self.dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-15T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
+		our_jira = JiraWrapper(config=self.jira_config)
+		actual_frame = our_jira.cycle_time_histogram(cycle='develop', buckets=[0, 6, 11, 'max'])
 
-        self.dummy_issues['Ops Tools'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+		expected = [
+			{'bucket': '0-5',   'develop': 2},
+			{'bucket': '6-10',  'develop': 6},
+			{'bucket': '11-15', 'develop': 1}
+		]
 
-        # 6-10
+		expected_frame = pd.DataFrame(expected).set_index('bucket')
 
-        self.dummy_issues['Ops Tools'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+		assert_frame_equal(actual_frame, expected_frame), actual_frame
 
-        self.dummy_issues['Portal'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Portal'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-08T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+	def testCycleTimeHistogramsWithNones(self):
+		"""
+		Deal with cycle time data containing Nones - i.e. work item has not gone through cycle we are reporting on
+		"""
 
-        self.dummy_issues['Portal'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-09T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+		for dummy_issue in self.dummy_issues['Ops Tools']:
+			dummy_issue.changelog = None
 
-        self.dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-09T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+		for dummy_issue in self.dummy_issues['Portal']:
+			dummy_issue.changelog = None
 
-        self.dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-10T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+		for dummy_issue in self.dummy_issues['Reports']:
+			dummy_issue.changelog = None
 
+		# 0-5
 
-        # 11-20
+		self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-15T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
+		self.dummy_issues['Portal'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', 'In Progress', 'pending')])])
 
-        our_jira = JiraWrapper(config=self.jira_config)
-        actual_frame = our_jira.cycle_time_histogram(cycle='develop', buckets=[0, 6, 11, 'max'])
 
-        expected = [
-            {'bucket': '0-5',   'develop': 2},
-            {'bucket': '6-10',  'develop': 6},
-            {'bucket': '11-15', 'develop': 1}
-        ]
+		our_jira = JiraWrapper(config=self.jira_config)
+		actual_frame = our_jira.cycle_time_histogram(cycle='develop', buckets=[0,2,4])
 
-        expected_frame = pd.DataFrame(expected).set_index('bucket')
+		expected = [
+			{'bucket': '0-1',  'develop': 0},
+			{'bucket': '2-4',  'develop': 1}
+		]
 
-        assert_frame_equal(actual_frame, expected_frame), actual_frame
+		expected_frame = pd.DataFrame(expected).set_index('bucket')
 
+		assert_frame_equal(actual_frame, expected_frame), actual_frame
 
-    def testCycleTimeHistogramsWithNones(self):
-        """
-        Deal with cycle time data containing Nones - i.e. work item has not gone through cycle we are reporting on
-        """
+	def testGetMultipleTypesCycleTime(self):
+		"""
+		Get histogram for multiple types.  
+		"""
 
-        for dummy_issue in self.dummy_issues['Ops Tools']:
-            dummy_issue.changelog = None
+		for dummy_issue in self.dummy_issues['Ops Tools']:
+			dummy_issue.changelog = None
 
-        for dummy_issue in self.dummy_issues['Portal']:
-            dummy_issue.changelog = None
+		for dummy_issue in self.dummy_issues['Portal']:
+			dummy_issue.changelog = None
 
-        for dummy_issue in self.dummy_issues['Reports']:
-            dummy_issue.changelog = None
+		for dummy_issue in self.dummy_issues['Reports']:
+			dummy_issue.changelog = None
 
-        # 0-5
+		# Failure
 
-        self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+		self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
+		self.dummy_issues['Ops Tools'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Portal'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', 'In Progress', 'pending')])])
+		# Value
 
+		self.dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        our_jira = JiraWrapper(config=self.jira_config)
-        actual_frame = our_jira.cycle_time_histogram(cycle='develop', buckets=[0,2,4])
+		self.dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        expected = [
-            {'bucket': '0-1',  'develop': 0},
-            {'bucket': '2-4',  'develop': 1}
-        ]
+		self.dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        expected_frame = pd.DataFrame(expected).set_index('bucket')
+		our_jira = JiraWrapper(config=self.jira_config)
 
-        assert_frame_equal(actual_frame, expected_frame), actual_frame
+		actual_frame = our_jira.cycle_time_histogram(cycle='develop', types=['value', 'failure'], buckets=[0,2,5,6])
 
-    def testGetMultipleTypesCycleTime(self):
-        """
-        Get histogram for multiple types.  
-        """
+		expected = [
+			{'bucket': '0-1', 'failure-develop': 1, 'value-develop': 0},
+			{'bucket': '2-4', 'failure-develop': 0, 'value-develop': 2},
+			{'bucket': '5-6', 'failure-develop': 1, 'value-develop': 1}
+		]
 
-        for dummy_issue in self.dummy_issues['Ops Tools']:
-            dummy_issue.changelog = None
+		expected_frame = pd.DataFrame(expected).set_index('bucket')
 
-        for dummy_issue in self.dummy_issues['Portal']:
-            dummy_issue.changelog = None
+		assert_frame_equal(actual_frame, expected_frame), actual_frame
 
-        for dummy_issue in self.dummy_issues['Reports']:
-            dummy_issue.changelog = None
 
-        # Failure
+	def testMakeHistogramBucketLabels(self):
+		"""
+		Make histogram bucket labels based on the bin edges used
+		"""
 
-        self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+		expected = ['0-5', '6-10', '11-20']
 
-        self.dummy_issues['Ops Tools'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+		actual = bucket_labels([0, 6, 11, 20])
 
-        # Value
+		self.assertEqual(actual, expected)
 
-        self.dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+	def testFailGracefullyIfMissingStates(self):
+		"""
+		If we are missing states in the CFD report then exit and tell user which state is missing
+		"""
+		jira_config = copy.copy(self.jira_config)
+		jira_config['states'] = []
+		our_jira = JiraWrapper(config=jira_config)
 
-        our_jira = JiraWrapper(config=self.jira_config)
+		for dummy_issue in self.dummy_issues['Ops Tools']:
+			dummy_issue.changelog = None
 
-        actual_frame = our_jira.cycle_time_histogram(cycle='develop', types=['value', 'failure'], buckets=[0,2,5,6])
+		for dummy_issue in self.dummy_issues['Portal']:
+			dummy_issue.changelog = None
 
-        expected = [
-            {'bucket': '0-1', 'failure-develop': 1, 'value-develop': 0},
-            {'bucket': '2-4', 'failure-develop': 0, 'value-develop': 2},
-            {'bucket': '5-6', 'failure-develop': 1, 'value-develop': 1}
-        ]
+		for dummy_issue in self.dummy_issues['Reports']:
+			dummy_issue.changelog = None
 
-        expected_frame = pd.DataFrame(expected).set_index('bucket')
+		self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+														  mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        assert_frame_equal(actual_frame, expected_frame), actual_frame
+		self.assertRaises(MissingState, our_jira.cfd, until_date=date(2012, 1, 8))
 
+	def testFailGracefullyIfMissingConfigParams(self):
 
-    def testMakeHistogramBucketLabels(self):
-        """
-        Make histogram bucket labels based on the bin edges used
-        """
+		jira_config = copy.copy(self.jira_config)
+		jira_config.pop('types', None)
+		self.assertRaises(MissingConfigItem, JiraWrapper, config=jira_config)
 
-        expected = ['0-5', '6-10', '11-20']
+	@unittest.skip("Skipping so I can commit the mock refactoring")
+	def testGetTotalsInStates(self):
+		"""
+		We just want the headline figures on our WIP levels and queue lengths across the Project Portfolio.
+		"""
 
-        actual = bucket_labels([0, 6, 11, 20])
+		jira_config = copy.copy(self.jira_config)
+		jira_config['categories'] = {'totals_test': 'totals_test'}
 
-        self.assertEqual(actual, expected)
+		our_jira = JiraWrapper(config=jira_config)
 
+		expected = [
+			{'Ops Tools': { 'queued': 10, 'in progress': 5, 'customer queue': 1},
+			 'Portal':    { 'queued':  0, 'in progress': 2, 'customer queue': 5},
+			 'Reports':   { 'queued':  2, 'in progress': 4, 'customer queue': 5}}
+		]
 
+		actual = our_jira.totals()
 
-    def testFailGracefullyIfMissingStates(self):
-        """
-        If we are missing states in the CFD report then exit and tell user which state is missing
-        """
-        jira_config = copy.copy(self.jira_config)
-        jira_config['states'] = []
-        our_jira = JiraWrapper(config=jira_config)
+		self.assertEqual(expected, actual)
 
-        for dummy_issue in self.dummy_issues['Ops Tools']:
-            dummy_issue.changelog = None
+	def testConfigureWithBasicAuth(self):
+		"""
+		In adding oauth we are changing the way authentication is stored in the config.  It is now
+		encapsulated in its own dict.
+		"""
 
-        for dummy_issue in self.dummy_issues['Portal']:
-            dummy_issue.changelog = None
+		basic_jira_config = {
+			"server": "https://worldofchris.atlassian.net",
+			"categories": [],
+			"cycles": [],
+			"types": [],
+			"authentication": {
+				"username": "mrjira",
+				"password": "234214234324"
+			}
+		}
 
-        for dummy_issue in self.dummy_issues['Reports']:
-            dummy_issue.changelog = None
+		our_jira = JiraWrapper(config=basic_jira_config)
 
-        self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                          mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+		self.mock_jira.JIRA.assert_called_with({'server': basic_jira_config['server']},
+											   basic_auth=(basic_jira_config['authentication']['username'], 
+														   basic_jira_config['authentication']['password']))
 
-        self.assertRaises(MissingState, our_jira.cfd, until_date=date(2012, 1, 8))
+		# What can we meaningfully assert here?
 
-    def testFailGracefullyIfMissingConfigParams(self):
+	def testConfigureWithOauth(self):
+		"""
+		We want to be able to connect to JIRA with Oauth and not just basic auth esp. if we want to make this
+		available as a web service.
+		"""
 
-        jira_config = copy.copy(self.jira_config)
-        jira_config.pop('types', None)
-        self.assertRaises(MissingConfigItem, JiraWrapper, config=jira_config)
+		key_cert = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'key.pem')
 
-    @unittest.skip("Skipping so I can commit the mock refactoring")
-    def testGetTotalsInStates(self):
-        """
-        We just want the headline figures on our WIP levels and queue lengths across the Project Portfolio.
-        """
+		oauth_jira_config = {
+			"server": "https://worldofchris.atlassian.net",
+			"categories": [],
+			"cycles": [],
+			"types": [],
+			"authentication": {
+				'access_token': 'In3d5YsFmqRTDJah2gg5sNH0WM2ekKzA',
+				'access_token_secret': '9COeo40njrZGgMU8GjqjdEpKye6TLDXJ',
+				'consumer_key': 'jlf',
+				'key_cert': key_cert
+			}
+		}      
 
-        jira_config = copy.copy(self.jira_config)
-        jira_config['categories'] = {'totals_test': 'totals_test'}
-
-        our_jira = JiraWrapper(config=jira_config)
-
-        expected = [
-            {'Ops Tools': { 'queued': 10, 'in progress': 5, 'customer queue': 1},
-             'Portal':    { 'queued':  0, 'in progress': 2, 'customer queue': 5},
-             'Reports':   { 'queued':  2, 'in progress': 4, 'customer queue': 5}}
-        ]
-
-        actual = our_jira.totals()
-
-        self.assertEqual(expected, actual)
-
-    def testConfigureWithBasicAuth(self):
-        """
-        In adding oauth we are changing the way authentication is stored in the config.  It is now
-        encapsulated in its own dict.
-        """
-
-        basic_jira_config = {
-            "server": "https://worldofchris.atlassian.net",
-            "categories": [],
-            "cycles": [],
-            "types": [],
-            "authentication": {
-                "username": "mrjira",
-                "password": "234214234324"
-            }
-        }
-
-        our_jira = JiraWrapper(config=basic_jira_config)
-
-        self.mock_jira.JIRA.assert_called_with({'server': basic_jira_config['server']},
-                                               basic_auth=(basic_jira_config['authentication']['username'], 
-                                                           basic_jira_config['authentication']['password']))
-
-        # What can we meaningfully assert here?
-
-    def testConfigureWithOauth(self):
-        """
-        We want to be able to connect to JIRA with Oauth and not just basic auth esp. if we want to make this
-        available as a web service.
-        """
-
-        key_cert = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'key.pem')
-
-        oauth_jira_config = {
-            "server": "https://worldofchris.atlassian.net",
-            "categories": [],
-            "cycles": [],
-            "types": [],
-            "authentication": {
-                'access_token': 'In3d5YsFmqRTDJah2gg5sNH0WM2ekKzA',
-                'access_token_secret': '9COeo40njrZGgMU8GjqjdEpKye6TLDXJ',
-                'consumer_key': 'jlf',
-                'key_cert': key_cert
-            }
-        }      
-
-        with open(key_cert, 'r') as key_cert_file:
-            key_cert_data = key_cert_file.read()
+		with open(key_cert, 'r') as key_cert_file:
+			key_cert_data = key_cert_file.read()
  
-        our_jira = JiraWrapper(config=oauth_jira_config)
+		our_jira = JiraWrapper(config=oauth_jira_config)
 
-        self.mock_jira.JIRA.assert_called_with({'server': oauth_jira_config['server']},
-                                               oauth={'access_token': oauth_jira_config['authentication']['access_token'],
-                                                      'access_token_secret': oauth_jira_config['authentication']['access_token_secret'],
-                                                      'consumer_key': oauth_jira_config['authentication']['consumer_key'],
-                                                      'key_cert': key_cert_data})
+		self.mock_jira.JIRA.assert_called_with({'server': oauth_jira_config['server']},
+											   oauth={'access_token': oauth_jira_config['authentication']['access_token'],
+													  'access_token_secret': oauth_jira_config['authentication']['access_token_secret'],
+													  'consumer_key': oauth_jira_config['authentication']['consumer_key'],
+													  'key_cert': key_cert_data})
 
-    def testMissingKeyCertFile(self):
+	def testMissingKeyCertFile(self):
 
-        missing_key_cert = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'missing_key.pem')
+		missing_key_cert = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'missing_key.pem')
 
-        oauth_jira_config = {
-            "server": "https://worldofchris.atlassian.net",
-            "categories": [],
-            "cycles": [],
-            "types": [],
-            "authentication": {
-                'access_token': 'In3d5YsFmqRTDJah2gg5sNH0WM2ekKzA',
-                'access_token_secret': '9COeo40njrZGgMU8GjqjdEpKye6TLDXJ',
-                'consumer_key': 'jlf',
-                'key_cert': missing_key_cert
-            }
-        }      
+		oauth_jira_config = {
+			"server": "https://worldofchris.atlassian.net",
+			"categories": [],
+			"cycles": [],
+			"types": [],
+			"authentication": {
+				'access_token': 'In3d5YsFmqRTDJah2gg5sNH0WM2ekKzA',
+				'access_token_secret': '9COeo40njrZGgMU8GjqjdEpKye6TLDXJ',
+				'consumer_key': 'jlf',
+				'key_cert': missing_key_cert
+			}
+		}      
 
-        self.assertRaises(MissingConfigItem, JiraWrapper, config=oauth_jira_config)
+		self.assertRaises(MissingConfigItem, JiraWrapper, config=oauth_jira_config)
+
+	def testGetDone(self):
+		"""
+		Get details of all completed issues - this is where cycle time currently appears.
+		Might want to factor that out...
+		"""
+
+		jira_config = copy.copy(self.jira_config)
+		jira_config['categories'] = {'done': 'done'}
+		jira_config['counts_towards_throughput'] = ''
+		jira_config['cycles'] = {'develop': {
+			'start': START_STATE,
+			'exit': 'Customer Approval'
+			}
+		}
+
+		dummy_issues = {'done': [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01')]}
+		dummy_issues['done'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', START_STATE, 'In Progress')]),
+														   mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')]),
+														   mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'Customer Approval', 'Done')])])
+
+		self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
+
+		our_jira = JiraWrapper(config=jira_config)
+
+		expected = [{'id': 'PORTAL-1', 'develop': 1}]
+		expected_frame = pd.DataFrame(expected).sort_index(axis=1, ascending=False)
+
+		actual_frame = our_jira.done(fields=['id', 'develop'])
+
+		assert_frame_equal(actual_frame, expected_frame), actual_frame
