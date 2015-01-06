@@ -492,16 +492,26 @@ class JiraWrapper(object):
                     try:
                         for cycle in self.cycles:
                             reopened_state = None
+                            after_state = None
+                            start_state = None
                             created_date = datetime.strptime(issue.fields.created[:10],
                                                              '%Y-%m-%d')
                             if 'ignore' in self.cycles[cycle]:
                                 reopened_state = self.cycles[cycle]['ignore']
+
+                            if 'after' in self.cycles[cycle]:
+                                after_state = self.cycles[cycle]['after']
+                            
+                            if 'start' in self.cycles[cycle]:
+                                start_state = self.cycles[cycle]['start']
+
                             if 'exit' in self.cycles[cycle]:
 
                                 setattr(issue,
                                             cycle,
                                             cycle_time(issue.changelog.histories,
-                                                       start_state=self.cycles[cycle]['start'],
+                                                       start_state=start_state,
+                                                       after_state=after_state,
                                                        exit_state=self.cycles[cycle]['exit'],
                                                        created_date=created_date,
                                                        reopened_state=reopened_state))
@@ -509,7 +519,8 @@ class JiraWrapper(object):
                                 setattr(issue,
                                         cycle,
                                         cycle_time(issue.changelog.histories,
-                                                   start_state=self.cycles[cycle]['start'],
+                                                   start_state=start_state,
+                                                   after_state=after_state,
                                                    end_state=self.cycles[cycle]['end'],
                                                    created_date=created_date,
                                                    reopened_state=reopened_state))

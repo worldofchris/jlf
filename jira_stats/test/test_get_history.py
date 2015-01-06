@@ -61,6 +61,19 @@ class TestIssueHistory(unittest.TestCase):
                                      exit_state=START_STATE,
                                      created_date=datetime(2012, 11, 28)), 10)
 
+    def testCycleStartsWithExitingAState(self):
+        """In some workflows, the cycle we are intertested in can start with a transition into a number of states
+            so we measure from the exit of the previous state rather than the arrival at a specific state."""
+
+        histories = [mockHistory(u'2012-11-21T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                     mockHistory(u'2012-11-28T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+                     mockHistory(u'2012-11-30T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])]
+
+        self.assertEquals(cycle_time(histories, 
+                                     after_state='queued',
+                                     created_date=datetime(2012, 11, 28)), 10)
+
+
     def testGetDaysInStates(self):
         """
         Work is getting stuck in CA for ages.  We want to see for how long.

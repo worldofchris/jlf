@@ -10,6 +10,7 @@ REOPENED_STATE = 'Reopened'
 
 def cycle_time(histories,
                start_state=START_STATE,
+               after_state=None,
                end_state=END_STATE,
                exit_state=None,
                reopened_state=REOPENED_STATE,
@@ -35,15 +36,24 @@ def cycle_time(histories,
 
                 new_start_date = None
 
-                if item.toString == start_state:
+                if after_state:
 
-                    new_start_date = datetime.strptime(history.created[:10],
-                                                       '%Y-%m-%d')
+                    if item.fromString == after_state:
 
-                if item.fromString == start_state:
+                        new_start_date = datetime.strptime(history.created[:10],
+                                                           '%Y-%m-%d')
 
-                    new_start_date = datetime.strptime(history.created[:10],
-                                                       '%Y-%m-%d')
+                else:
+
+                    if item.toString == start_state:
+
+                        new_start_date = datetime.strptime(history.created[:10],
+                                                           '%Y-%m-%d')
+
+                    if item.fromString == start_state:
+
+                        new_start_date = datetime.strptime(history.created[:10],
+                                                           '%Y-%m-%d')
 
                 if new_start_date is not None:
 
