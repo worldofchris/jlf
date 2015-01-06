@@ -45,6 +45,22 @@ def serve_dummy_throughput(*args, **kwargs):
 
         return pd.DataFrame({'one': [1, 2, 3]})
 
+def serve_dummy_done(*args, **kwargs):
+
+    if 'fields' in kwargs:
+
+        fields = kwargs['fields']
+        values = [1] * len(fields)
+
+        dummy = pd.DataFrame([values], columns=fields)
+
+    else:
+
+        dummy = pd.DataFrame([['TICKET-1','Dummy Ticket',3]])
+        dummy.columns = ['id', 'name', 'cycle time']
+
+    return dummy
+
 def serve_dummy_cfd_data(*args, **kwargs):
 
     dummy = pd.DataFrame([['',     'in progress', 'closed'],
@@ -61,9 +77,9 @@ class TestGetOutput(unittest.TestCase):
         self.mock_jira_wrapper = mock.Mock(spec=JiraWrapper)
         self.mock_jira_wrapper.throughput.side_effect = serve_dummy_throughput
         self.mock_jira_wrapper.demand.side_effect = serve_dummy_results
-        self.mock_jira_wrapper.done.side_effect = serve_dummy_results
         self.mock_jira_wrapper.cycle_time_histogram.side_effect = serve_dummy_results
         self.mock_jira_wrapper.arrival_rate.side_effect = serve_dummy_results
+        self.mock_jira_wrapper.done.side_effect = serve_dummy_done
 
         self.mock_jira_wrapper.cfd.side_effect = serve_dummy_cfd_data
         
@@ -195,6 +211,7 @@ class TestGetOutput(unittest.TestCase):
 
         report_config = {'name':     'reports',
                          'reports':  [{'metric':     'done',
+                                       'fields': ['this', 'that', 'the other'],
                                        'categories': 'foreach',
                                        'types':      'foreach',
                                        'sort':       'week-done'}],
@@ -221,10 +238,17 @@ class TestGetOutput(unittest.TestCase):
         # with a sheet containing the throughput data
 
         workbook = xlrd.open_workbook(actual_output)
+
         self.assertEqual('done', workbook.sheet_names()[0])
 
-        # and sorted by week-done...
+        sheet = workbook.sheet_by_name('done')
 
+        fields = report_config['reports'][0]['fields']
+        for i in range(len(fields)):
+            self.assertEqual(sheet.cell_value(0,i+1), fields[i])
+
+        # and test sorted by week-done...
+        # and test when no fields specified
 
     def testOutputCycleTimeToExcel(self):
 
@@ -434,6 +458,11 @@ class TestGetOutput(unittest.TestCase):
 
         self.compareExcelFiles(actual_output, expected_filename)
 
+    @unittest.skip("TODO")
+    def testHistoryToExcel(self):
+        pass
+
+
     def compareExcelFiles(self, actual_output, expected_filename):
 
         # Sadly reading of xlsx files with their formatting by xlrd is not supported.
@@ -465,3 +494,5 @@ class TestGetOutput(unittest.TestCase):
             expected_full_path = os.path.join(expected_workspace, cmp_file)
             actual_full_path = os.path.join(actual_workspace, cmp_file)
             self.assertTrue(filecmp.cmp(expected_full_path, actual_full_path), '{0}:{1}'.format(expected_full_path, actual_full_path))
+
+

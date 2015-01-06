@@ -76,7 +76,7 @@ class TestIssueHistory(unittest.TestCase):
 
         actual = time_in_states(histories, created, today)
 
-        expected = [{'state': 'queued',
+        expected = [{'state': 'Open',
                      'days' : 2},
                     {'state': START_STATE,
                      'days' : 10},
@@ -84,6 +84,23 @@ class TestIssueHistory(unittest.TestCase):
                      'days' : 2},
                     {'state': END_STATE,
                      'days' : 2}]
+
+        assert actual == expected, actual
+
+    def testGetTimeInStatesWithNoHistory(self):
+
+        """
+        If a ticket has not left its initial state then it has no explict history so we need to 
+        create one for it based on how long it has been in this initial state.
+        """
+
+        created = date(2012, 11, 16)
+        today = date(2012, 12, 02)
+
+        expected = [{'state': 'Open',
+                     'days' : 16}]
+
+        actual = time_in_states([], created, today)
 
         assert actual == expected, actual
 

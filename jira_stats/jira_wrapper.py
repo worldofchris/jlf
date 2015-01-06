@@ -195,7 +195,7 @@ class JiraWrapper(object):
                         print issue_day_history
 
                 except AttributeError as e:
-                    print e
+                    pass
 
             self.issue_history = history
 
@@ -492,14 +492,18 @@ class JiraWrapper(object):
                     try:
                         for cycle in self.cycles:
                             reopened_state = None
+                            created_date = datetime.strptime(issue.fields.created[:10],
+                                                             '%Y-%m-%d')
                             if 'ignore' in self.cycles[cycle]:
                                 reopened_state = self.cycles[cycle]['ignore']
                             if 'exit' in self.cycles[cycle]:
+
                                 setattr(issue,
                                             cycle,
                                             cycle_time(issue.changelog.histories,
                                                        start_state=self.cycles[cycle]['start'],
                                                        exit_state=self.cycles[cycle]['exit'],
+                                                       created_date=created_date,
                                                        reopened_state=reopened_state))
                             else:
                                 setattr(issue,
@@ -507,6 +511,7 @@ class JiraWrapper(object):
                                         cycle_time(issue.changelog.histories,
                                                    start_state=self.cycles[cycle]['start'],
                                                    end_state=self.cycles[cycle]['end'],
+                                                   created_date=created_date,
                                                    reopened_state=reopened_state))
 
                     except AttributeError:

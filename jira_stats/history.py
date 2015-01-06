@@ -22,6 +22,7 @@ def cycle_time(histories,
        if different from the default."""
 
     if start_state == created_state:
+
         start_date = created_date
     else:
         start_date = None
@@ -96,7 +97,7 @@ def time_in_states(histories, from_date=None, until_date=None):
 
     time_in_states = []
 
-    current_state = None
+    current_state = 'Open'
 
     if from_date is None:
         from_date = date(1970, 01, 01)

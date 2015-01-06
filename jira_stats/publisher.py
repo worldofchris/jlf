@@ -70,7 +70,11 @@ def publish(config, jira, from_date, to_date):
             # It seems inconsistent that 'done' does not allow you to specify a date range.
             # If it did then all the metric functions could have the same interface
             # so making this code DRYer and more succinct
-            data = jira.done()
+            if 'fields' in report:
+                fields = report['fields']
+            else:
+                fields = None
+            data = jira.done(fields=fields)
 
         if report['metric'] == 'cycle-time':
             types = None
