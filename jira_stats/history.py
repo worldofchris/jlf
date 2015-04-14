@@ -159,6 +159,7 @@ def arrivals(histories, add_to=None):
 
         for item in history.items:
             if item.field == 'status':
+
                 if not item.toString in arrivals[day]:
                     arrivals[day][item.toString] = 1
                 else:

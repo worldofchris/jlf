@@ -30,11 +30,11 @@ It is intended to complement the existing [kanban reporting](https://confluence.
 
         virtualenv jlf
         source jlf/bin/activate
-	
+    
 * Install with setup.py
 
-	    python setup.py install
-	
+        python setup.py install
+    
 ## Configuration
 
 To start getting metrics out of JIRA you'll need a JSON config file describing your JIRA instance, the filters for the issues you want to report on, different types of work, cycles and the metrics you want to extract.
@@ -66,7 +66,7 @@ Configuring OAuth access to JIRA is described in more detail at the end of this 
 You can get metrics one or a number of separate sets of issues.  Typically these might be all the issues associated with a particular project or with a specific release (FixVersion) of a project
 
     "categories": {
-		"project-x": "(project = 'Project X')"
+        "project-x": "(project = 'Project X')"
         "infrastructure-work": "('Epic Link' = INF-250)",
     },
 
@@ -119,8 +119,8 @@ If you want to report on any metrics which need to know about state order, ie. C
 
 In order to calculate throughput, JLF needs to know what constitutes a successfully completed piece of work.  By default this is:
 
-	 AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)
-	 
+     AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)
+     
 This will most likely not fit all workflows so you can configure it to match yours with:
 
     "counts_towards_throughput": " AND issuetype in standardIssueTypes() AND status in (Closed)",
@@ -142,8 +142,8 @@ The location the spreadsheet should be written to is set with:
 
 The metrics to be included are then specified in:
 
-	"reports": [..],
-	    
+    "reports": [..],
+        
 The following metrics are available and can be configured as described below:
 
 #### Cycle Time Histogram
@@ -188,11 +188,9 @@ This project is generating around four defects a week!
         },
 
 
-#### Done
+#### Detail
 
-What work have we completed and how long did it take to complete?
-
-The *Done* report lists all the work that has been completed along with the cycle times for that work.
+This report lists all JIRA issues along with their cycle times.
 
 This report is used to create simple bar chart control charts:
 
@@ -292,8 +290,8 @@ I find it useful for showing specific examples of work that has spent a long tim
 
 Once you have a config file you can run jlf with:
 
-		jlf -c CONFIG_FILE -n NUM_WEEKS
-		
+        jlf -c CONFIG_FILE -n NUM_WEEKS
+        
 Where `CONFIG_FILE` is the path to your config file and `NUM_WEEKS` is the number of weeks of work you want to report on.
 
 ## Development
@@ -302,11 +300,11 @@ Where `CONFIG_FILE` is the path to your config file and `NUM_WEEKS` is the numbe
 
 * Run the tests with:
 
-	    nosetests
+        nosetests
 
 * To run a single test, specify the path to the module, the Test Case Class Name and the test Case Name.  e.g.
 
-		nosetests jira_stats.test.test_jira_wrapper:TestGetMetrics.testGetArrivalRate
+        nosetests jira_stats.test.test_jira_wrapper:TestGetMetrics.testGetArrivalRate
 
 ## Configuring OAuth access to JIRA
 
@@ -318,8 +316,8 @@ The Application Link requires the public key of an RSA key-pair.  You then use t
 
 If you don't have one already you can generate them with:
 
-	openssl genrsa -out jira.pem 1024
-	openssl rsa -in jira.pem -pubout -out jira.pub
+    openssl genrsa -out jira.pem 1024
+    openssl rsa -in jira.pem -pubout -out jira.pub
 
 Thanks to [beeplogic](https://answers.atlassian.com/questions/45037/how-do-you-configure-jira-to-use-oauth-with-a-generic-application-specifically-jenkins) for the commands for generating an RSA key-pair.
 
@@ -350,15 +348,15 @@ To get an Access Token and Access Token Secret run jirashell with the following 
 
 For example:
 
-		jirashell -s https://worldofchris.atlassian.net -od -k ~/.ssh/jira.pem -ck jlf -pt
-		Request tokens received.
-    		Request token:        G92UPCBWLOvDYr2kfrZoKTmC8QyZtQ36
-    		Request token secret: uckUts4NPZ0jcuEwgQL6WDcx78vxHTQM
-		Your browser is opening the OAuth authorization for this client session.
-		Have you authorized this program to connect on your behalf to https://worldofchris.atlassian.net? (y/n)y
-		Access tokens received.
-    		Access token:        Akif9EqT7FqslmUctbnHxVRD2tmbFcHu
-    		Access token secret: uckUts4NPZ0jcuEwgQL6WDcx78vxHTQM
-		<JIRA Shell 0.16 (https://worldofchris.atlassian.net)>
+        jirashell -s https://worldofchris.atlassian.net -od -k ~/.ssh/jira.pem -ck jlf -pt
+        Request tokens received.
+            Request token:        G92UPCBWLOvDYr2kfrZoKTmC8QyZtQ36
+            Request token secret: uckUts4NPZ0jcuEwgQL6WDcx78vxHTQM
+        Your browser is opening the OAuth authorization for this client session.
+        Have you authorized this program to connect on your behalf to https://worldofchris.atlassian.net? (y/n)y
+        Access tokens received.
+            Access token:        Akif9EqT7FqslmUctbnHxVRD2tmbFcHu
+            Access token secret: uckUts4NPZ0jcuEwgQL6WDcx78vxHTQM
+        <JIRA Shell 0.16 (https://worldofchris.atlassian.net)>
 
-		*** JIRA shell active; client is in 'jira'. Press Ctrl-D to exit.
+        *** JIRA shell active; client is in 'jira'. Press Ctrl-D to exit.

@@ -28,6 +28,7 @@ from bucket import bucket_labels
 
 from collections import Counter
 
+
 class MissingState(Exception):
 
     def __init__(self, expr, msg):
@@ -38,6 +39,7 @@ class MissingState(Exception):
 
         return self.msg
 
+
 class MissingConfigItem(Exception):
 
     def __init__(self, expr, msg):
@@ -47,6 +49,7 @@ class MissingConfigItem(Exception):
     def __str__(self):
 
         return self.msg
+
 
 class JiraWrapper(object):
     """
@@ -80,36 +83,32 @@ class JiraWrapper(object):
                 raise MissingConfigItem('key_cert', "key_cert not found:{0}". format(authentication['key_cert']))
 
             self.jira = jira.client.JIRA({'server': config['server']},
-                                          oauth={'access_token': authentication['access_token'],
-                                                 'access_token_secret': authentication['access_token_secret'],
-                                                 'consumer_key': authentication['consumer_key'],
-                                                 'key_cert': key_cert_data})
+                                         oauth={'access_token': authentication['access_token'],
+                                                'access_token_secret': authentication['access_token_secret'],
+                                                'consumer_key': authentication['consumer_key'],
+                                                'key_cert': key_cert_data})
         else:
             raise MissingConfigItem('authentication', "Authentication misconfigured")
 
         self.categories = None
         self.cycles = None
         self.types = None
-        self.ongoing_states = None
         self.states = []
+
+        if 'throughput_dow' in config:
+            self.throughput_dow = config['throughput_dow']
+        else:
+            self.throughput_dow = 4
 
         try:
             self.categories = config['categories']
             self.cycles = config['cycles']
             self.types = config['types']
+            self.counts_towards_throughput = config['counts_towards_throughput']
         except KeyError as e:
             raise MissingConfigItem(e.message, "Missing Config Item:{0}".format(e.message))
-        try:
-            self.counts_towards_throughput = config['counts_towards_throughput']
-        except KeyError:
-            self.counts_towards_throughput = ' AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)'
 
         # Optional
-
-        try:
-            self.ongoing_states = config['ongoing']
-        except KeyError:
-            pass
 
         try:
             self.states = config['states']
@@ -117,43 +116,30 @@ class JiraWrapper(object):
         except KeyError:
             pass
 
-        self.done_issues = None
-        self.ongoing_issues = None
         self.all_issues = None
         self.issue_history = None
 
-    def __str__(self):
-        issues_as_string = "Jira Issues\ndone:\n{done}\nongoing:\n{ongoing}". format(done=self.done,
-                                                                                     ongoing=self.ongoing)
-        return issues_as_string
+    def issue(self, key):
+        if self.all_issues is None:
+            self.all_issues = self._issues_from_jira()
 
-    @property
-    def ongoing(self):
-        """
-        All issues that are still in flight
-        """
-        if self.ongoing_issues is None:
-            self._populate_ongoing_issues_from_jira()
+        matches = [issue for issue in self.all_issues if issue.key == key]
+        return matches[0]
 
-        issue_rows = self._issues_as_rows(self.ongoing_issues)
-        df = pd.DataFrame(issue_rows)
-        return df
-
-    def done(self, fields=None):
+    def issues(self, fields=None):
         """
-        All issues that have been completed
+        All issues
         """
-        if self.done_issues is None:
-            self._populate_done_issues_from_jira()
+        if self.all_issues is None:
+            self.all_issues = self._issues_from_jira()
 
-        issue_rows = self._issues_as_rows(self.done_issues) 
+        issue_rows = self._issues_as_rows(self.all_issues)
         df = pd.DataFrame(issue_rows)
 
         if fields is None:
             return df
         else:
             return df.filter(fields)
-
 
     def history(self, from_date=None, until_date=None):
 
@@ -253,7 +239,6 @@ class JiraWrapper(object):
 
         issue_rows = self._issues_as_rows(self.all_issues, types)
 
-        # Does ongoing exclude done in its query?
         df = pd.DataFrame(issue_rows)
         table = pd.tools.pivot.pivot_table(df, rows=['week_created'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
 
@@ -267,55 +252,37 @@ class JiraWrapper(object):
                    category=None,
                    types=None):
         """
-        Return the throughput for our issues
+        Return throughput for all issues in a state where they are considered
+        to count towards throughput.
+
+        Might want to add some additional conditions other than state but state
+        allows us the most options as to where to place the 'finishing line'
         """
 
-        if self.done_issues is None:
-            self._populate_done_issues_from_jira()
+        if self.issue_history is None:
+            self.history(from_date, to_date)
 
         issue_rows = []
 
-        for issue in self.done_issues:
+        for issue_key in self.issue_history:
+
+            issue = self.issue(issue_key)
+
             if category is not None:
+
                 if category != issue.category:
                     continue
-            f = issue.fields
 
-            resolution_date_str = f.resolutiondate
+            for day, state in self.issue_history[issue_key].iteritems():
+                if day.weekday() == self.throughput_dow:
 
-            if resolution_date_str is not None:
+                    if state in self.counts_towards_throughput:
 
-                resolution_date = datetime.strptime(resolution_date_str[:10], '%Y-%m-%d')
-
-                if (resolution_date.date() >= from_date) and (resolution_date.date() <= to_date):
-
-                    swimlane = issue.category
-
-                    # Are we grouping by work type?
-
-                    if types is not None:
-                        for type_grouping in types:
-                            if f.issuetype.name in self.types[type_grouping]:
-                                swimlane = swimlane + '-' + type_grouping
-                            else:
-                                pass # print "Not counting " + f.issuetype.name 
-
-                    issue_row = {'swimlane':   swimlane,
-                                 'id':         issue.key,
-                                 'week':       week_start_date(resolution_date.isocalendar()[0],
-                                                               resolution_date.isocalendar()[1]).strftime('%Y-%m-%d'),
-                                 'project':    f.project.name,
-                                 'type':       f.issuetype.name,
-                                 'components': None,
-                                 'count':      1}
-
-                    components = []
-                    for component in f.components:
-                        components.append(component.name)
-
-                    issue_row['components'] = ",".join(components)
-
-                    issue_rows.append(issue_row)
+                        issue_row = {'swimlane': issue.category,
+                                     'id':       issue_key,
+                                     'week':     day,
+                                     'count':    1}
+                        issue_rows.append(issue_row)
 
         df = pd.DataFrame(issue_rows)
 
@@ -323,19 +290,12 @@ class JiraWrapper(object):
 
             table = pd.tools.pivot.pivot_table(df, rows=['week'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
 
-            reindexed = table.reindex(index=fill_date_index_blanks(table.index), fill_value=np.int64(0))
-            noncum = reindexed.fillna(0)
             if cumulative:
-                cumtab = noncum.cumsum(axis=0)
-
-                # For some reason the name of the index gets blown away by the reindex
-                cumtab.index.name = table.index.name
-
-                return cumtab
+                return table
 
             else:
-
-                return noncum
+                # TODO: The non cumulative version
+                return table
 
         else:
 
@@ -358,8 +318,8 @@ class JiraWrapper(object):
         for issue in self.all_issues:
             try:
                 arrivals_count = arrivals(issue.changelog.histories, arrivals_count)
-            except AttributeError:
-                pass
+            except AttributeError as e:
+                print e
 
         df = pd.DataFrame.from_dict(arrivals_count, orient='index')
         df.index = pd.to_datetime(df.index)
@@ -539,17 +499,6 @@ class JiraWrapper(object):
 
         return issues
 
-    def _populate_ongoing_issues_from_jira(self):
-        filter = 'and (status in ({status_list})) and issuetype in standardIssueTypes()'.format(status_list = ', '.join('"{status}"'.format(status=status) for status in self.ongoing_states))
-        self.ongoing_issues = self._issues_from_jira(filter=filter)
-
-    def _populate_done_issues_from_jira(self):
-
-        """
-        We want to exclude subtasks and anything that was not resolved as fixed
-        """
-        self.done_issues = self._issues_from_jira(filter=self.counts_towards_throughput)
-
     def _issues_as_rows(self, issues, types=None):
 
         """
@@ -626,7 +575,7 @@ class JiraWrapper(object):
                              'type':         f.issuetype.name,
                              'id':           issue.key,
                              'name':         f.summary,
-                             'status':       f.status.name, 
+                             'status':       f.status.name,
                              'project':      f.project.name,
                              'components':   None,
                              'week':         week,

@@ -25,7 +25,7 @@
             "Task"
         ]
     },
-    "ongoing": [],
+    "counts_towards_throughput": ["Resolved"],
     "states": ["Open", "In Progress", "Resolved", "Closed"],
     "name": "reports",
     "reports": [
