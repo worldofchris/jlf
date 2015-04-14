@@ -13,7 +13,6 @@ from jira_stats.jira_wrapper import MissingState, MissingConfigItem
 from pandas.util.testing import assert_frame_equal
 
 import mock
-from mockito import when, any, unstub
 from jira_stats.test.jira_mocks import mockHistory, mockItem, START_STATE, END_STATE
 import copy
 
