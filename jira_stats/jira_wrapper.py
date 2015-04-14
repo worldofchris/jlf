@@ -273,12 +273,25 @@ class JiraWrapper(object):
                 if category != issue.category:
                     continue
 
+            swimlane = issue.category
+
+            # Are we grouping by work type?
+            f = issue.fields
+
+            if types is not None:
+                for type_grouping in types:
+                    if f.issuetype.name in self.types[type_grouping]:
+                        swimlane = swimlane + '-' + type_grouping
+                    else:
+                        pass
+                        # print "Not counting " + f.issuetype.name
+
             for day, state in self.issue_history[issue_key].iteritems():
                 if day.weekday() == self.throughput_dow:
 
                     if state in self.counts_towards_throughput:
 
-                        issue_row = {'swimlane': issue.category,
+                        issue_row = {'swimlane': swimlane,
                                      'id':       issue_key,
                                      'week':     day,
                                      'count':    1}
@@ -294,7 +307,14 @@ class JiraWrapper(object):
                 return table
 
             else:
-                # TODO: The non cumulative version
+
+                def foo_func(x):
+                    for i in range(x.size-1, 0, -1):
+                        x[i] = x[i] - x[i-1]
+                    return x
+
+                table = table.apply(foo_func)
+
                 return table
 
         else:

@@ -308,7 +308,6 @@ class TestGetMetrics(unittest.TestCase):
                                            from_date=date(2012, 01, 01),
                                            to_date=date(2012, 11, 13))
 
-
         assert_frame_equal(actual_frame.astype(np.int64), expected_frame), actual_frame
 
     def testGetThroughputMultipleCategories(self):
@@ -400,14 +399,12 @@ class TestGetMetrics(unittest.TestCase):
             actual_week_start = week_start_date(issue['year'], issue['week'])
             assert issue['week_start'] == actual_week_start, actual_week_start
 
-    @unittest.skip("Needs changelog adding to it for it to work")
     def testGetDifferentWorkTypes(self):
         """
         In order to see how our throughput is split across value work, failure work and operational
         overhead we want to be able to specify the work type we are interested in when we ask for throughput.
         """
 
-        unstub()
         # Given these issue in Jira
 
         # For our test data we want to cover value and failure demand and operational overhead.
@@ -432,62 +429,59 @@ class TestGetMetrics(unittest.TestCase):
                                              '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05', '2012-11-05',
                                              '2012-11-12', '2012-11-12', '2012-11-12', '2012-11-12', '2012-11-12', '2012-11-12']}
 
-        dummy_issues = []
+        dummy_issues = {'THINGY': []}
         n = 0
 
         for issue_type in issue_types:
             for resolved in issue_types[issue_type]:
-                dummy_issues.append(MockIssue(key='PORTAL-{n}'.format(n=n),
-                                              resolution_date=resolved,
-                                              project_name='Portal',
-                                              issuetype_name=issue_type,
-                                              created='2012-01-01'))
+                dummy_issues['THINGY'].append(MockIssue(key='THINGY-{n}'.format(n=n),
+                                                        resolution_date=resolved,
+                                                        project_name='Portal',
+                                                        issuetype_name=issue_type,
+                                                        created='2012-01-01',
+                                                        change_log=MockChangelog([mockHistory(u'{date}T09:54:29.284+0000'.format(date=resolved),
+                                                                                              [mockItem('status',
+                                                                                                        'queued',
+                                                                                                        END_STATE)])])))
+
                 n += 1
 
-        mock_jira = jira.client.JIRA()
-
-        when(mock_jira).search_issues(any(),
-                                      startAt=any(),
-                                      maxResults=any()).thenReturn(dummy_issues)
-
-        when(jira.client).JIRA(any(), basic_auth=any()).thenReturn(mock_jira)
-
-        expected = {'PORTAL-value':    pd.Series([np.int64(1),
+        expected = {'THINGY-value':    pd.Series([np.int64(1),
                                                   np.int64(5),
                                                   np.int64(7),
                                                   np.int64(2),
                                                   np.int64(6),
                                                   np.int64(6)],
-                                                 index=['2012-10-08',
+                                                 index=pd.to_datetime(['2012-10-08',
                                                         '2012-10-15',
                                                         '2012-10-22',
                                                         '2012-10-29',
                                                         '2012-11-05',
-                                                        '2012-11-12']),
-                    'PORTAL-failure':  pd.Series([np.int64(1),
+                                                        '2012-11-12'])),
+                    'THINGY-failure':  pd.Series([np.int64(1),
                                                   np.int64(1),
                                                   np.int64(2),
                                                   np.int64(10),
                                                   np.int64(4),
                                                   np.int64(1)],
-                                                 index=['2012-10-08',
+                                                 index=pd.to_datetime(['2012-10-08',
                                                         '2012-10-15',
                                                         '2012-10-22',
                                                         '2012-10-29',
                                                         '2012-11-05',
-                                                        '2012-11-12']),
-                    'PORTAL-overhead': pd.Series([np.int64(1),
+                                                        '2012-11-12'])),
+                    'THINGY-overhead': pd.Series([np.int64(1),
                                                   np.int64(2),
                                                   np.int64(3),
                                                   np.int64(1),
                                                   np.int64(3),
                                                   np.int64(2)],
-                                                 index=['2012-10-08',
+                                                 index=pd.to_datetime(['2012-10-08',
                                                         '2012-10-15',
                                                         '2012-10-22',
                                                         '2012-10-29',
                                                         '2012-11-05',
-                                                        '2012-11-12'])}
+                                                        '2012-11-12']))}
 
         expected_frame = pd.DataFrame(expected)
         expected_frame.index.name = 'week'
@@ -495,7 +489,9 @@ class TestGetMetrics(unittest.TestCase):
 
         # We are only test one category here so override the default test config
         jira_config = copy.copy(self.jira_config)
-        jira_config['categories'] = {'PORTAL': 'project = PORTAL'}
+        jira_config['categories'] = {'THINGY': 'THINGY'}
+
+        self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
 
         our_jira = JiraWrapper(config=jira_config)
 
@@ -503,7 +499,7 @@ class TestGetMetrics(unittest.TestCase):
 
         actual_frame = our_jira.throughput(cumulative=False,
                                            from_date=date(2012, 01, 01),
-                                           to_date=date(2012, 12, 31),
+                                           to_date=date(2012, 11, 13),
                                            types=["value", "failure", "overhead"])
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
