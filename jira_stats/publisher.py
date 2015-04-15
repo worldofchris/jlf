@@ -66,7 +66,7 @@ def publish(config, jira, from_date, to_date):
         if report['metric'] == 'demand':
             data = jira.demand(from_date, to_date, report['types'])
 
-        if report['metric'] == 'done':
+        if report['metric'] == 'detail':
             # It seems inconsistent that 'done' does not allow you to specify a date range.
             # If it did then all the metric functions could have the same interface
             # so making this code DRYer and more succinct
@@ -74,7 +74,7 @@ def publish(config, jira, from_date, to_date):
                 fields = report['fields']
             else:
                 fields = None
-            data = jira.done(fields=fields)
+            data = jira.issues(fields=fields)
 
         if report['metric'] == 'cycle-time':
             types = None

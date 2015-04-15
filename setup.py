@@ -25,8 +25,7 @@ setup(
     install_requires=[
         'argparse==1.2.1',
         'ipython==0.13.2',
-        'jira-python',
-        'mockito==0.5.1',
+        'jira',
         'numpy',
         'openpyxl==1.6.2',
         'pandas==0.13.1',

@@ -45,7 +45,7 @@ def serve_dummy_throughput(*args, **kwargs):
 
         return pd.DataFrame({'one': [1, 2, 3]})
 
-def serve_dummy_done(*args, **kwargs):
+def serve_dummy_detail(*args, **kwargs):
 
     if 'fields' in kwargs:
 
@@ -73,13 +73,13 @@ def serve_dummy_cfd_data(*args, **kwargs):
 class TestGetOutput(unittest.TestCase):
 
     def setUp(self):
-          
+      
         self.mock_jira_wrapper = mock.Mock(spec=JiraWrapper)
         self.mock_jira_wrapper.throughput.side_effect = serve_dummy_throughput
         self.mock_jira_wrapper.demand.side_effect = serve_dummy_results
         self.mock_jira_wrapper.cycle_time_histogram.side_effect = serve_dummy_results
         self.mock_jira_wrapper.arrival_rate.side_effect = serve_dummy_results
-        self.mock_jira_wrapper.done.side_effect = serve_dummy_done
+        self.mock_jira_wrapper.issues.side_effect = serve_dummy_detail
 
         self.mock_jira_wrapper.cfd.side_effect = serve_dummy_cfd_data
         
@@ -115,6 +115,7 @@ class TestGetOutput(unittest.TestCase):
                                       'types':      'foreach'}],
                          'format':   'xlsx',
                          'location': self.workspace,
+                         'counts_towards_throughput': [],
                          'types': {
                             'failure': ['Bug', 'Fault'],
                             'value': ['New Feature', 'Story', 'Improvement'],
@@ -152,6 +153,7 @@ class TestGetOutput(unittest.TestCase):
                                        'categories': 'foreach',
                                        'types':      'foreach'}],
                         'format':   'xlsx',
+                        'counts_towards_throughput': [],
                         'location': self.workspace,
                          'types': {
                             'failure': ['Bug', 'Fault'],
@@ -184,6 +186,7 @@ class TestGetOutput(unittest.TestCase):
                                        'types':      ['failure']}],
                          'format':   'xlsx',
                          'location': self.workspace,
+                         'counts_towards_throughput': [],
                          'types': {
                             'failure': ['Bug', 'Fault'],
                             'value': ['New Feature', 'Story', 'Improvement'],
@@ -210,12 +213,13 @@ class TestGetOutput(unittest.TestCase):
     def testOutputDoneToExcel(self):
 
         report_config = {'name':     'reports',
-                         'reports':  [{'metric':     'done',
+                         'reports':  [{'metric':     'detail',
                                        'fields': ['this', 'that', 'the other'],
                                        'categories': 'foreach',
                                        'types':      'foreach',
                                        'sort':       'week-done'}],
                          'format':   'xlsx',
+                         'counts_towards_throughput': [],
                          'location': self.workspace,
                             'types': {
                             'failure': ['Bug', 'Fault'],
@@ -239,9 +243,9 @@ class TestGetOutput(unittest.TestCase):
 
         workbook = xlrd.open_workbook(actual_output)
 
-        self.assertEqual('done', workbook.sheet_names()[0])
+        self.assertEqual('detail', workbook.sheet_names()[0])
 
-        sheet = workbook.sheet_by_name('done')
+        sheet = workbook.sheet_by_name('detail')
 
         fields = report_config['reports'][0]['fields']
         for i in range(len(fields)):
@@ -283,6 +287,7 @@ class TestGetOutput(unittest.TestCase):
                          'states':   [],
                          'reports':  [{'metric': 'cfd'}],
                          'format':   'xlsx',
+                         'counts_towards_throughput': [],
                          'location': self.workspace}
 
         publisher.publish(report_config,
@@ -322,6 +327,7 @@ class TestGetOutput(unittest.TestCase):
                                        'types':      'foreach'}],
                          'format':   'xlsx',
                          'location': self.workspace,
+                         'counts_towards_throughput': [],
                          'categories': {
                             'one': 'project = "one"',
                             'two': 'project = "two"',

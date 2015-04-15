@@ -80,6 +80,7 @@ def cycle_time(histories,
                             end_date = datetime.strptime(history.created[:10],
                                                          '%Y-%m-%d')
 
+
     if start_date is None or end_date is None:
         return None
 
@@ -159,6 +160,7 @@ def arrivals(histories, add_to=None):
 
         for item in history.items:
             if item.field == 'status':
+
                 if not item.toString in arrivals[day]:
                     arrivals[day][item.toString] = 1
                 else:
