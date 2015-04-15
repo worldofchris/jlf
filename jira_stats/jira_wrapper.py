@@ -377,7 +377,7 @@ class JiraWrapper(object):
                         break
 
                 if not include:
-                    continue 
+                    continue
 
             else:
                 key = cycle
@@ -469,6 +469,7 @@ class JiraWrapper(object):
                 for issue in issue_batch:
 
                     issue.category = category
+
                     try:
                         for cycle in self.cycles:
                             reopened_state = None

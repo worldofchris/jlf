@@ -80,6 +80,7 @@ def cycle_time(histories,
                             end_date = datetime.strptime(history.created[:10],
                                                          '%Y-%m-%d')
 
+
     if start_date is None or end_date is None:
         return None
 

@@ -212,7 +212,6 @@ class TestGetMetrics(unittest.TestCase):
 
     def set_dummy_issues(self, issues=None, queries=None, config=None):
 
-        print "Setting dummy issues"
         # If no issues are specified use the default set
         if issues is not None:
             self.dummy_issues = issues
@@ -687,31 +686,33 @@ class TestGetMetrics(unittest.TestCase):
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
-    @unittest.skip("FIXME")
     def testGetArrivalRate(self):
         """
         What rate does work transition into a specific state?
         e.g. arrive at the customer review queue.
 
-        This is to deal with situations where work is not being closed and so does not have a resoultion date and
+        This is to deal with situations where work is not being closed and so does not have a resolution date and
         so cannot be counted towards throughput
         """
 
-        our_jira = JiraWrapper(config=self.jira_config)
+        jira_config = copy.copy(self.jira_config)
+        jira_config['categories'] = {'Ops Tools': 'Ops Tools'}
 
         # Set up the dummy issue history to give us our expected arrival rate
 
-        for dummy_issue in self.dummy_issues['Ops Tools']:
-            dummy_issue.changelog = None
+        dummy_issues = {
+            'Ops Tools':   [MockIssue(key='OPSTOOLS-1',
+                                      resolution_date='2012-11-10',
+                                      project_name='Portal',
+                                      issuetype_name='Defect',
+                                      created='2012-01-01')]}
 
-        for dummy_issue in self.dummy_issues['Portal']:
-            dummy_issue.changelog = None
+        dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'QA Queue')]),
+                                                                mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'QA Queue', 'Customer Approval')])])
 
-        for dummy_issue in self.dummy_issues['Reports']:
-            dummy_issue.changelog = None
+        self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
 
-        self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'QA Queue')]),
-                                                                     mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'QA Queue', 'Customer Approval')])])
+        our_jira = JiraWrapper(config=jira_config)
 
         expected = {
             pd.to_datetime('2012-01-02'): {'QA Queue': np.int64(1), 'Customer Approval': np.int64(1)}
@@ -732,94 +733,154 @@ class TestGetMetrics(unittest.TestCase):
         # MVP would be for this mapping to be provided in the config file
         pass
 
-    @unittest.skip("FIXME")
     def testGetSingleCycleAsHistogram(self):
         """
         Get Cycle Time as Histogram for a single cycle
         """
 
+        jira_config = copy.copy(self.jira_config)
+        jira_config['categories'] = {'Reports': 'Reports', 'Ops Tools': 'Ops Tools', 'Portal': 'Portal'}
+        jira_config['counts_towards_throughput'] = ''
+        jira_config['cycles'] = {'develop': {
+            'start': START_STATE,
+            'end': 'Customer Approval'
+            }
+        }
+
         # We need some issues with start and end dates that fall into different buckets
-        # TODO: Refactor this to remove duplication in other tests
 
-        for dummy_issue in self.dummy_issues['Ops Tools']:
-            dummy_issue.changelog = None
-
-        for dummy_issue in self.dummy_issues['Portal']:
-            dummy_issue.changelog = None
-
-        for dummy_issue in self.dummy_issues['Reports']:
-            dummy_issue.changelog = None
-
+        dummy_issues = {
+            'Ops Tools':   [MockIssue(key='OPSTOOLS-1',
+                                      resolution_date='2012-11-10',
+                                      project_name='Portal',
+                                      issuetype_name='Defect',
+                                      created='2012-01-01'),
+                            MockIssue(key='OPSTOOLS-2',
+                                      resolution_date='2012-11-12',
+                                      project_name='Portal',
+                                      issuetype_name='Defect',
+                                      created='2012-01-01'),
+                            MockIssue(key='OPSTOOLS-3',
+                                      resolution_date='2012-10-10',
+                                      project_name='Portal',
+                                      issuetype_name='Defect',
+                                      created='2012-01-01')],
+            'Portal':      [MockIssue(key='PORTAL-1',
+                                      resolution_date='2012-11-10',
+                                      project_name='Portal',
+                                      issuetype_name='Defect',
+                                      created='2012-01-01'),
+                            MockIssue(key='PORTAL-2',
+                                      resolution_date='2012-11-12',
+                                      project_name='Portal',
+                                      issuetype_name='Defect',
+                                      created='2012-01-01'),
+                            MockIssue(key='PORTAL-3',
+                                      resolution_date='2012-10-10',
+                                      project_name='Portal',
+                                      issuetype_name='Defect',
+                                      created='2012-01-01')],
+            'Reports':     [MockIssue(key='REPORTS-1',
+                                      resolution_date='2012-11-10',
+                                      project_name='Portal',
+                                      issuetype_name='Data Request',
+                                      created='2012-01-01'),
+                            MockIssue(key='REPORTS-2',
+                                      resolution_date='2012-11-12',
+                                      project_name='Portal',
+                                      issuetype_name='Improve Feature',
+                                      created='2012-01-01'),
+                            MockIssue(key='REPORTS-3',
+                                      resolution_date='2012-10-10',
+                                      project_name='Portal',
+                                      issuetype_name='Improve Feature',
+                                      created='2012-01-01')]
+            }
         # 0-5
 
-        self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                     mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                                mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Ops Tools'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                     mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Ops Tools'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                                mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
         # 6-10
 
-        self.dummy_issues['Ops Tools'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                     mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Ops Tools'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                                mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Portal'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                  mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Portal'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                             mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Portal'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                  mockHistory(u'2012-01-08T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Portal'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                             mockHistory(u'2012-01-08T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Portal'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                  mockHistory(u'2012-01-09T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Portal'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                             mockHistory(u'2012-01-09T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                   mockHistory(u'2012-01-09T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                              mockHistory(u'2012-01-09T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
         # 11-12
 
-        self.dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                   mockHistory(u'2012-01-10T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                              mockHistory(u'2012-01-10T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                   mockHistory(u'2012-01-15T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                              mockHistory(u'2012-01-15T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        our_jira = JiraWrapper(config=self.jira_config)
+        self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
+
+        our_jira = JiraWrapper(config=jira_config)
         actual_frame = our_jira.cycle_time_histogram(cycle='develop', buckets=[0, 6, 11, 'max'])
 
         expected = [
             {'bucket': '0-5',     'develop': 2},
             {'bucket': '6-10',    'develop': 6},
-            {'bucket': '11-15', 'develop': 1}
+            {'bucket': '11-15',   'develop': 1}
         ]
 
         expected_frame = pd.DataFrame(expected).set_index('bucket')
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
-    @unittest.skip("FIXME")
     def testCycleTimeHistogramsWithNones(self):
         """
         Deal with cycle time data containing Nones - i.e. work item has not gone through cycle we are reporting on
         """
 
-        for dummy_issue in self.dummy_issues['Ops Tools']:
-            dummy_issue.changelog = None
+        jira_config = copy.copy(self.jira_config)
+        jira_config['categories'] = {'Ops Tools': 'Ops Tools', 'Portal': 'Portal'}
 
-        for dummy_issue in self.dummy_issues['Portal']:
-            dummy_issue.changelog = None
-
-        for dummy_issue in self.dummy_issues['Reports']:
-            dummy_issue.changelog = None
+        dummy_issues = {
+            'Ops Tools':   [MockIssue(key='OPSTOOLS-1',
+                                      resolution_date='2012-11-10',
+                                      project_name='Portal',
+                                      issuetype_name='Defect',
+                                      created='2012-01-01')],
+            'Portal':      [MockIssue(key='PORTAL-1',
+                                      resolution_date='2012-11-10',
+                                      project_name='Portal',
+                                      issuetype_name='Defect',
+                                      created='2012-01-01'),
+                            MockIssue(key='PORTAL-2',
+                                      resolution_date='2012-11-12',
+                                      project_name='Portal',
+                                      issuetype_name='Defect',
+                                      created='2012-01-01')]}
 
         # 0-5
 
-        self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                     mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                                mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Portal'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                  mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', 'In Progress', 'pending')])])
+        dummy_issues['Portal'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                             mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', 'In Progress', 'pending')])])
 
-        our_jira = JiraWrapper(config=self.jira_config)
+
+        self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
+
+        our_jira = JiraWrapper(config=jira_config)
         actual_frame = our_jira.cycle_time_histogram(cycle='develop', buckets=[0, 2, 4])
 
         expected = [
@@ -831,41 +892,75 @@ class TestGetMetrics(unittest.TestCase):
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
-    @unittest.skip("FIXME")
     def testGetMultipleTypesCycleTime(self):
         """
         Get histogram for multiple types.
         """
 
-        for dummy_issue in self.dummy_issues['Ops Tools']:
-            dummy_issue.changelog = None
+        jira_config = copy.copy(self.jira_config)
+        jira_config['categories'] = {'Reports': 'Reports', 'Ops Tools': 'Ops Tools'}
+        jira_config['counts_towards_throughput'] = ''
+        jira_config['cycles'] = {'develop': {
+            'start': START_STATE,
+            'end': 'Customer Approval'
+            }
+        }
 
-        for dummy_issue in self.dummy_issues['Portal']:
-            dummy_issue.changelog = None
-
-        for dummy_issue in self.dummy_issues['Reports']:
-            dummy_issue.changelog = None
+        dummy_issues = {
+            'Ops Tools':   [MockIssue(key='OPSTOOLS-1',
+                                      resolution_date='2012-11-10',
+                                      project_name='Portal',
+                                      issuetype_name='Defect',
+                                      created='2012-01-01'),
+                            MockIssue(key='OPSTOOLS-2',
+                                      resolution_date='2012-11-12',
+                                      project_name='Portal',
+                                      issuetype_name='Defect',
+                                      created='2012-01-01'),
+                            MockIssue(key='OPSTOOLS-3',
+                                      resolution_date='2012-10-10',
+                                      project_name='Portal',
+                                      issuetype_name='Defect',
+                                      created='2012-01-01')],
+            'Reports':     [MockIssue(key='REPORTS-1',
+                                      resolution_date='2012-11-10',
+                                      project_name='Portal',
+                                      issuetype_name='Data Request',
+                                      created='2012-01-01'),
+                            MockIssue(key='REPORTS-2',
+                                      resolution_date='2012-11-12',
+                                      project_name='Portal',
+                                      issuetype_name='Improve Feature',
+                                      created='2012-01-01'),
+                            MockIssue(key='REPORTS-3',
+                                      resolution_date='2012-10-10',
+                                      project_name='Portal',
+                                      issuetype_name='Improve Feature',
+                                      created='2012-01-01')],
+        }
 
         # Failure
 
-        self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                     mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                                mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Ops Tools'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                     mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Ops Tools'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                                mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
         # Value
 
-        self.dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                   mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                              mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                   mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                              mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        self.dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                   mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                              mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        our_jira = JiraWrapper(config=self.jira_config)
+        self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
+
+        our_jira = JiraWrapper(config=jira_config)
 
         actual_frame = our_jira.cycle_time_histogram(cycle='develop', types=['value', 'failure'], buckets=[0, 2, 5, 6])
 
@@ -890,26 +985,27 @@ class TestGetMetrics(unittest.TestCase):
 
         self.assertEqual(actual, expected)
 
-    @unittest.skip("FIXME")
     def testFailGracefullyIfMissingStates(self):
         """
         If we are missing states in the CFD report then exit and tell user which state is missing
         """
         jira_config = copy.copy(self.jira_config)
         jira_config['states'] = []
+        jira_config['categories'] = {'Ops Tools': 'Ops Tools'}
+
+        dummy_issues = {
+            'Ops Tools':   [MockIssue(key='OPSTOOLS-1',
+                                      resolution_date='2012-11-10',
+                                      project_name='Portal',
+                                      issuetype_name='Defect',
+                                      created='2012-01-01')]}
+
+        dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+                                                                mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+
+
+        self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
         our_jira = JiraWrapper(config=jira_config)
-
-        for dummy_issue in self.dummy_issues['Ops Tools']:
-            dummy_issue.changelog = None
-
-        for dummy_issue in self.dummy_issues['Portal']:
-            dummy_issue.changelog = None
-
-        for dummy_issue in self.dummy_issues['Reports']:
-            dummy_issue.changelog = None
-
-        self.dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                     mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
         self.assertRaises(MissingState, our_jira.cfd, until_date=date(2012, 1, 8))
 
