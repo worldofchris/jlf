@@ -36,10 +36,13 @@ def main():
     config_file = open(args.config_filename)
     config = json.load(config_file)
 
-    our_jira = JiraWrapper(config=config)
-
     end_date = datetime.now()
     start_date = end_date - timedelta(weeks=args.num_weeks)
+
+    if 'until_date' not in config:
+        config['until_date'] = datetime.strftime(end_date, '%Y-%m-%d')
+
+    our_jira = JiraWrapper(config=config)
 
     try:
         publisher.publish(config,
