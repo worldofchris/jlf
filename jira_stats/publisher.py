@@ -64,7 +64,10 @@ def publish(config, jira, from_date, to_date):
             data = jira.cfd(from_date, to_date)
 
         if report['metric'] == 'demand':
-            data = jira.demand(from_date, to_date, report['types'])
+            types = None
+            if 'types' in report:
+                types = report['types']
+            data = jira.demand(from_date, to_date, types)
 
         if report['metric'] == 'detail':
             # It seems inconsistent that 'done' does not allow you to specify a date range.
