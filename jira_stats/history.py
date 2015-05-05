@@ -32,7 +32,7 @@ def cycle_time(history,
         if after_state:
 
             if day == after_state:
-                if i == len(history.index):
+                if i == len(history.index) - 1:
                     new_start_date = history.index[i]
                 else:
                     new_start_date = history.index[i+1]
