@@ -69,7 +69,7 @@ class JiraWrapper(object):
 
         if 'username' in authentication and 'password' in authentication:
             self.jira = jira.client.JIRA({'server': config['server']},
-                                         basic_auth=(authentication['username'], 
+                                         basic_auth=(authentication['username'],
                                                      authentication['password']))
         elif ('access_token' in authentication and
               'access_token_secret' in authentication and
@@ -94,6 +94,10 @@ class JiraWrapper(object):
         self.cycles = None
         self.types = None
         self.states = []
+        self.until_date = None
+
+        if 'until_date' in config:
+            self.until_date = datetime.strptime(config['until_date'], '%Y-%m-%d').date()
 
         if 'throughput_dow' in config:
             self.throughput_dow = config['throughput_dow']
@@ -152,36 +156,7 @@ class JiraWrapper(object):
 
             for issue in self.all_issues:
 
-                created_date = datetime.strptime(issue.fields.created[:10], '%Y-%m-%d')
-
-                try:
-
-                    issue_history = time_in_states(issue.changelog.histories, from_date=created_date, until_date=until_date)
-
-                    issue_day_history = []
-                    total_days = 0
-
-                    for state_days in issue_history:
-
-                        state = state_days['state']
-                        days = state_days['days']
-
-                        days_in_state = [state] * days
-
-                        issue_day_history += days_in_state
-                        total_days += days
-
-                    dates = [created_date + timedelta(days=x) for x in range(0, total_days)]
-
-                    try:
-                        history[issue.key] = pd.Series(issue_day_history, index=dates)
-                    except AssertionError as e:
-                        print e
-                        print dates
-                        print issue_day_history
-
-                except AttributeError as e:
-                    pass
+                history[issue.key] = issue.history
 
             self.issue_history = history
 
@@ -470,7 +445,7 @@ class JiraWrapper(object):
 
                     created_date = datetime.strptime(issue.fields.created[:10], '%Y-%m-%d')
                     if issue.changelog is not None:
-                        issue.history = history_from_jira_changelog(issue.changelog, created_date)
+                        issue.history = history_from_jira_changelog(issue.changelog, created_date, self.until_date)
 
                     try:
                         for cycle in self.cycles:

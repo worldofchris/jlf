@@ -294,7 +294,10 @@ class TestGetMetrics(unittest.TestCase):
         expected_frame.index.name = 'week'
         expected_frame.columns.name = 'swimlane'
 
-        our_jira = JiraWrapper(config=self.jira_config)
+        jira_config = copy.copy(self.jira_config)
+        jira_config['until_date'] = '2012-11-13'
+
+        our_jira = JiraWrapper(config=jira_config)
 
         actual_frame = our_jira.throughput(cumulative=True,
                                            from_date=date(2012, 01, 01),
@@ -307,7 +310,10 @@ class TestGetMetrics(unittest.TestCase):
         Cumulative Throughput Table - Multiple Categories
         """
 
-        our_jira = JiraWrapper(config=self.jira_config)
+        jira_config = copy.copy(self.jira_config)
+        jira_config['until_date'] = '2012-11-13'
+
+        our_jira = JiraWrapper(config=jira_config)
 
         expected_1 = {'Ops Tools': pd.Series([np.int64(1),
                                               np.int64(1),
@@ -482,6 +488,7 @@ class TestGetMetrics(unittest.TestCase):
         # We are only test one category here so override the default test config
         jira_config = copy.copy(self.jira_config)
         jira_config['categories'] = {'THINGY': 'THINGY'}
+        jira_config['until_date'] = '2012-11-13'
 
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
 
@@ -575,6 +582,7 @@ class TestGetMetrics(unittest.TestCase):
                                                                  '2012-01-07']))}
 
         jira_config = copy.copy(self.jira_config)
+        jira_config['until_date'] = '2012-01-08'
         jira_config['categories'] = {'Reports': 'Reports'}
         jira_config['counts_towards_throughput'] = ''
         jira_config['cycles'] = {'develop': {
@@ -627,6 +635,7 @@ class TestGetMetrics(unittest.TestCase):
         """
 
         jira_config = copy.copy(self.jira_config)
+        jira_config['until_date'] = '2012-01-08'
         jira_config['categories'] = {'Reports': 'Reports'}
         jira_config['counts_towards_throughput'] = ''
         jira_config['cycles'] = {'develop': {
