@@ -1,4 +1,5 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+import pandas as pd
 
 """States between which we consider an issue to be being worked on
    for the purposes of calculating cycletime"""
@@ -8,80 +9,77 @@ START_STATE = 'In Progress'
 END_STATE = 'Customer Approval'
 REOPENED_STATE = 'Reopened'
 
-def cycle_time(histories,
+
+def cycle_time(history,
                start_state=START_STATE,
                after_state=None,
                end_state=END_STATE,
                exit_state=None,
-               reopened_state=REOPENED_STATE,
-               created_state=CREATED_STATE,
-               created_date=None):
+               reopened_state=REOPENED_STATE):
 
     """Calculate how long it has taken an issue to get from START_STATE
        to END_STATE.  If we want to count from the date an issue was created
        we need to specify the date the issue was created and the CREATED_STATE
        if different from the default."""
 
-    if start_state == created_state:
-
-        start_date = created_date
-    else:
-        start_date = None
-
+    start_date = None
     end_date = None
 
-    for history in histories:
-        for item in history.items:
-            if item.field == 'status':
+    for i, day in enumerate(history):
 
-                new_start_date = None
+        new_start_date = None
 
-                if after_state:
+        if after_state:
 
-                    if item.fromString == after_state:
-
-                        new_start_date = datetime.strptime(history.created[:10],
-                                                           '%Y-%m-%d')
-
+            if day == after_state:
+                if i == len(history.index):
+                    new_start_date = history.index[i]
                 else:
+                    new_start_date = history.index[i+1]
 
-                    if item.toString == start_state:
+        else:
 
-                        new_start_date = datetime.strptime(history.created[:10],
-                                                           '%Y-%m-%d')
+            if day == start_state:
 
-                    if item.fromString == start_state:
+                new_start_date = history.index[i]
 
-                        new_start_date = datetime.strptime(history.created[:10],
-                                                           '%Y-%m-%d')
+            if day == start_state:
 
-                if new_start_date is not None:
+                new_start_date = history.index[i]
 
-                    if start_date is None:
-                        start_date = new_start_date
-                    else:
-                        if new_start_date < start_date:
-                            start_date = new_start_date
+        if new_start_date is not None:
 
-                if exit_state is not None:
+            if start_date is None:
+                start_date = new_start_date
+            else:
+                if new_start_date < start_date:
+                    start_date = new_start_date
 
-                    if item.fromString == exit_state:
-                        end_date = datetime.strptime(history.created[:10],
-                                                     '%Y-%m-%d')
+        if exit_state is not None:
+
+            if day == exit_state:
+                if i == len(history.index) - 1:
+                    end_date = history.index[i]
                 else:
-                    if item.toString == end_state:
+                    end_date = history.index[i+1]
+        else:
+            if day == end_state:
 
-                        # We ignore transitions to end_state if
-                        # they are from reopened.
-                        # This is because we sometime have to re-open
-                        # tickets just to fix
-                        # details of ownership, component, type or resolution.
-                        if item.fromString != reopened_state:
-                            end_date = datetime.strptime(history.created[:10],
-                                                         '%Y-%m-%d')
+                # We ignore transitions to end_state if
+                # they are from reopened.
+                # This is because we sometime have to re-open
+                # tickets just to fix
+                # details of ownership, component, type or resolution.
+                if day != reopened_state:
+                    end_date = history.index[i]
 
+    if start_date is None:
+        # Round up if we only ever saw the end state.
+        # This means that the start state was on the same day.
+        if end_date is not None:
+            return 1
 
-    if start_date is None or end_date is None:
+    if end_date is None:
         return None
 
     offset = 0
@@ -145,6 +143,37 @@ def time_in_states(histories, from_date=None, until_date=None):
                                'days':  1})
 
     return time_in_states
+
+
+def history_from_jira_changelog(changelog, created_date, until_date=None):
+
+    issue_history = time_in_states(changelog.histories, from_date=created_date, until_date=until_date)
+
+    issue_day_history = []
+    history = None
+    total_days = 0
+
+    for state_days in issue_history:
+
+        state = state_days['state']
+        days = state_days['days']
+
+        days_in_state = [state] * days
+
+        issue_day_history += days_in_state
+        total_days += days
+
+    dates = [created_date + timedelta(days=x) for x in range(0, total_days)]
+
+    try:
+        history = pd.Series(issue_day_history, index=dates)
+    except AssertionError as e:
+        print e
+        print dates
+        print issue_day_history
+
+    return history
+
 
 def arrivals(histories, add_to=None):
 

@@ -13,6 +13,12 @@ class mockItem(object):
                 self.toString = toString
 
 
+class mockChangelog(object):
+
+    def __init__(self, histories):
+        self.histories = histories
+
+CREATED_STATE = 'Open'
 START_STATE = 'In Progress'
 END_STATE = 'Customer Approval'
 REOPENED_STATE = 'Reopened'

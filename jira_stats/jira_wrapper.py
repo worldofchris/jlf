@@ -23,7 +23,7 @@ import numpy as np
 import math
 
 from index import fill_date_index_blanks, week_start_date
-from history import time_in_states, cycle_time, arrivals
+from history import time_in_states, cycle_time, arrivals, history_from_jira_changelog
 from bucket import bucket_labels
 
 from collections import Counter
@@ -171,7 +171,7 @@ class JiraWrapper(object):
                         issue_day_history += days_in_state
                         total_days += days
 
-                    dates = [ created_date + timedelta(days=x) for x in range(0, total_days) ]
+                    dates = [created_date + timedelta(days=x) for x in range(0, total_days)]
 
                     try:
                         history[issue.key] = pd.Series(issue_day_history, index=dates)
@@ -189,7 +189,6 @@ class JiraWrapper(object):
 
         return df
 
-
     def cfd(self, from_date=None, until_date=None):
         """
         Cumulative Flow Diagram
@@ -200,11 +199,11 @@ class JiraWrapper(object):
             self.history(from_date, until_date)
 
         cfd = pd.DataFrame(self.issue_history)
-        
+
         days = {}
 
         for day in cfd.index:
-            tickets = [] 
+            tickets = []
             for ticket in cfd.ix[day]:
                 tickets.append(ticket)
 
@@ -221,7 +220,7 @@ class JiraWrapper(object):
                             return -1
 
                     raise MissingState(state, "Missing state:{0}".format(state))
-            
+
             days[day] = sorted(tickets, key=state_order)
 
         return pd.DataFrame(days)
@@ -332,7 +331,7 @@ class JiraWrapper(object):
 
         if self.all_issues is None:
             self.all_issues = self._issues_from_jira()
- 
+
         arrivals_count = {}
 
         for issue in self.all_issues:
@@ -346,7 +345,6 @@ class JiraWrapper(object):
         wf = df.resample('W-MON', how='sum')
 
         return wf
-
 
     def cycle_time_histogram(self,
                              cycle,
@@ -470,40 +468,41 @@ class JiraWrapper(object):
 
                     issue.category = category
 
+                    created_date = datetime.strptime(issue.fields.created[:10], '%Y-%m-%d')
+                    if issue.changelog is not None:
+                        issue.history = history_from_jira_changelog(issue.changelog, created_date)
+
                     try:
                         for cycle in self.cycles:
                             reopened_state = None
                             after_state = None
                             start_state = None
-                            created_date = datetime.strptime(issue.fields.created[:10],
-                                                             '%Y-%m-%d')
+
                             if 'ignore' in self.cycles[cycle]:
                                 reopened_state = self.cycles[cycle]['ignore']
 
                             if 'after' in self.cycles[cycle]:
                                 after_state = self.cycles[cycle]['after']
-                            
+
                             if 'start' in self.cycles[cycle]:
                                 start_state = self.cycles[cycle]['start']
 
                             if 'exit' in self.cycles[cycle]:
 
                                 setattr(issue,
-                                            cycle,
-                                            cycle_time(issue.changelog.histories,
-                                                       start_state=start_state,
-                                                       after_state=after_state,
-                                                       exit_state=self.cycles[cycle]['exit'],
-                                                       created_date=created_date,
-                                                       reopened_state=reopened_state))
+                                        cycle,
+                                        cycle_time(issue.history,
+                                                   start_state=start_state,
+                                                   after_state=after_state,
+                                                   exit_state=self.cycles[cycle]['exit'],
+                                                   reopened_state=reopened_state))
                             else:
                                 setattr(issue,
                                         cycle,
-                                        cycle_time(issue.changelog.histories,
+                                        cycle_time(issue.history,
                                                    start_state=start_state,
                                                    after_state=after_state,
                                                    end_state=self.cycles[cycle]['end'],
-                                                   created_date=created_date,
                                                    reopened_state=reopened_state))
 
                     except AttributeError:
@@ -555,7 +554,7 @@ class JiraWrapper(object):
                 tis = time_in_states(issue.changelog.histories,
                                      datetime.strptime(f.created[:10],
                                                        '%Y-%m-%d'),
-                                                       date.today())
+                                     date.today())
 
                 since = tis[-1]['days']
 
@@ -585,7 +584,7 @@ class JiraWrapper(object):
                 except AttributeError:
                     story_points = None
 
-                try: 
+                try:
                     epic_link = f.customfield_10200
                 except AttributeError:
                     epic_link = None

@@ -1,78 +1,166 @@
 # -*- coding: utf-8 -*-
-from jira_stats.history import cycle_time, time_in_states, arrivals
-from jira_stats.test.jira_mocks import mockHistory, mockItem, START_STATE, END_STATE, REOPENED_STATE
+from jira_stats.history import cycle_time, time_in_states, arrivals, history_from_jira_changelog
+from jira_stats.test.jira_mocks import mockHistory, mockItem, mockChangelog, CREATED_STATE, START_STATE, END_STATE, REOPENED_STATE
 
 import unittest
-from datetime import date, datetime
+from datetime import date
+
+import pandas as pd
+from pandas.util.testing import assert_series_equal
 
 
 class TestIssueHistory(unittest.TestCase):
 
     def testGetCycleTime(self):
 
-        histories = [mockHistory(u'2012-11-18T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
-                     mockHistory(u'2012-11-28T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                     mockHistory(u'2012-11-30T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])]
+        history = pd.Series([CREATED_STATE,
+                             CREATED_STATE,
+                             START_STATE,
+                             'pending',
+                             'pending',
+                             'pending',
+                             'Customer Approval',
+                             'Customer Approval',
+                             'pending',
+                             'pending',
+                             'Customer Approval',
+                             'Customer Approval',
+                             'Customer Approval',
+                             'Customer Approval',
+                             END_STATE],
+                            index=pd.to_datetime(['2012-01-01',
+                                                  '2012-01-02',
+                                                  '2012-01-03',
+                                                  '2012-01-04',
+                                                  '2012-01-05',
+                                                  '2012-01-06',
+                                                  '2012-01-07',
+                                                  '2012-01-08',
+                                                  '2012-01-09',
+                                                  '2012-01-10',
+                                                  '2012-01-11',
+                                                  '2012-01-12',
+                                                  '2012-01-13',
+                                                  '2012-01-14',
+                                                  '2012-01-15']))
 
-        self.assertEquals(cycle_time(histories), 13)
+        self.assertEquals(cycle_time(history), 13)
 
     def testGetCycleTimeWithDropOuts(self):
 
-        histories = [mockHistory(u'2012-11-27T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                     mockHistory(u'2012-11-28T09:54:29.284+0000', [mockItem('status', 'pending', START_STATE)]),
-                     mockHistory(u'2012-11-30T09:54:29.284+0000', [mockItem('status', START_STATE, END_STATE)])]
+        history = pd.Series([START_STATE,
+                             'pending',
+                             START_STATE,
+                             END_STATE],
+                            index=pd.to_datetime(['2012-01-01',
+                                                  '2012-01-02',
+                                                  '2012-01-03',
+                                                  '2012-01-04']))
 
-        self.assertEquals(cycle_time(histories), 4)
+        self.assertEquals(cycle_time(history), 4)
 
     def testGetCycleTimeIsStillOpen(self):
 
-        histories = [mockHistory(u'2012-11-27T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')])]
+        history = pd.Series([START_STATE,
+                             'pending'],
+                            index=pd.to_datetime(['2012-01-01',
+                                                  '2012-01-02']))
 
-        self.assertEquals(cycle_time(histories), None)
+        self.assertEquals(cycle_time(history), None)
 
     def testGetCycleTimeIncRepopenedToClosed(self):
 
-        histories = [mockHistory(u'2012-11-28T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                     mockHistory(u'2012-11-30T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)]),
-                     mockHistory(u'2013-10-30T09:54:29.284+0000', [mockItem('status', REOPENED_STATE, END_STATE)])]
+        history = pd.Series([START_STATE,
+                             END_STATE,
+                             REOPENED_STATE,
+                             END_STATE],
+                            index=pd.to_datetime(['2012-01-01',
+                                                  '2012-01-02',
+                                                  '2012-01-03',
+                                                  '2012-01-04']))
 
-        self.assertEquals(cycle_time(histories), 3)
+        self.assertEquals(cycle_time(history), 4)
 
     def testCycleStartsWithOpen(self):
         """We need to be able to deal with workflows where there is no queue before work actually starts"""
 
-        histories = [mockHistory(u'2012-11-29T09:54:29.284+0000', [mockItem('status', 'Open', 'Awaiting Review')]),
-                     mockHistory(u'2012-11-30T09:54:29.284+0000', [mockItem('status', 'Awaiting Review', 'Reviewing')])]
+        history = pd.Series(['Open',
+                             'Awaiting Review',
+                             'Reviewing',
+                             END_STATE],
+                            index=pd.to_datetime(['2012-01-01',
+                                                  '2012-01-02',
+                                                  '2012-01-03',
+                                                  '2012-01-04']))
 
-        self.assertEquals(cycle_time(histories, 
+        self.assertEquals(cycle_time(history,
                                      start_state='Open',
-                                     end_state='Reviewing',
-                                     created_date=datetime(2012, 11, 28)), 3)
+                                     end_state='Reviewing'), 3)
 
     def testCycleEndsWithExitingAState(self):
         """In some workflows, the cycle we are interested in can end with a transition to more than one state so
            we measure to the exit from the last state rather than the arrival at the end state."""
 
-        histories = [mockHistory(u'2012-11-18T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
-                     mockHistory(u'2012-11-28T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                     mockHistory(u'2012-11-30T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])]
+        history = pd.Series([CREATED_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             'pending'],
+                            index=pd.to_datetime(['2012-01-01',
+                                                  '2012-01-02',
+                                                  '2012-01-03',
+                                                  '2012-01-04',
+                                                  '2012-01-05',
+                                                  '2012-01-06',
+                                                  '2012-01-07',
+                                                  '2012-01-08',
+                                                  '2012-01-09',
+                                                  '2012-01-10',
+                                                  '2012-01-11',
+                                                  '2012-01-12']))
 
-        self.assertEquals(cycle_time(histories, 
-                                     exit_state=START_STATE,
-                                     created_date=datetime(2012, 11, 28)), 10)
+        self.assertEquals(cycle_time(history, exit_state=START_STATE), 10)
 
     def testCycleStartsWithExitingAState(self):
         """In some workflows, the cycle we are intertested in can start with a transition into a number of states
             so we measure from the exit of the previous state rather than the arrival at a specific state."""
 
-        histories = [mockHistory(u'2012-11-21T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
-                     mockHistory(u'2012-11-28T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                     mockHistory(u'2012-11-30T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])]
+        history = pd.Series([CREATED_STATE,
+                             'queued',
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             END_STATE],
+                            index=pd.to_datetime(['2012-01-01',
+                                                  '2012-01-02',
+                                                  '2012-01-03',
+                                                  '2012-01-04',
+                                                  '2012-01-05',
+                                                  '2012-01-06',
+                                                  '2012-01-07',
+                                                  '2012-01-08',
+                                                  '2012-01-09',
+                                                  '2012-01-10',
+                                                  '2012-01-11',
+                                                  '2012-01-12',
+                                                  '2012-01-13']))
 
-        self.assertEquals(cycle_time(histories, 
-                                     after_state='queued',
-                                     created_date=datetime(2012, 11, 28)), 10)
-
+        self.assertEquals(cycle_time(history,
+                                     after_state='queued'), 11)
 
     def testGetDaysInStates(self):
         """
@@ -90,20 +178,20 @@ class TestIssueHistory(unittest.TestCase):
         actual = time_in_states(histories, created, today)
 
         expected = [{'state': 'Open',
-                     'days' : 2},
+                     'days':  2},
                     {'state': START_STATE,
-                     'days' : 10},
+                     'days':  10},
                     {'state': 'pending',
-                     'days' : 2},
+                     'days':  2},
                     {'state': END_STATE,
-                     'days' : 2}]
+                     'days':  2}]
 
         assert actual == expected, actual
 
     def testGetTimeInStatesWithNoHistory(self):
 
         """
-        If a ticket has not left its initial state then it has no explict history so we need to 
+        If a ticket has not left its initial state then it has no explict history so we need to
         create one for it based on how long it has been in this initial state.
         """
 
@@ -111,11 +199,59 @@ class TestIssueHistory(unittest.TestCase):
         today = date(2012, 12, 02)
 
         expected = [{'state': 'Open',
-                     'days' : 16}]
+                     'days': 16}]
 
         actual = time_in_states([], created, today)
 
         assert actual == expected, actual
+
+    def testGetHistoryFromJiraChangeLog(self):
+
+        """
+        Generate the internal daily history of a Jira issue from its ChangeLog
+
+        As part of the refactoring to make Cycle Time and Throughput use the internal
+        representation of history rather than the Jira ChangeLog Histories we want the
+        internal representation of an issue to contain its history in this form.
+
+        This also sets us up for the FogBugz integration which will see us decouple all
+        the Jira specific stuff from the internal data wrangling.
+        """
+
+        source = mockChangelog([mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', CREATED_STATE, 'queued')]),
+                                mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                mockHistory(u'2012-01-13T09:54:29.284+0000', [mockItem('status', START_STATE, END_STATE)])])
+
+        expected = pd.Series([CREATED_STATE,
+                             'queued',
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             START_STATE,
+                             END_STATE],
+                             index=pd.to_datetime(['2012-01-01',
+                                                   '2012-01-02',
+                                                   '2012-01-03',
+                                                   '2012-01-04',
+                                                   '2012-01-05',
+                                                   '2012-01-06',
+                                                   '2012-01-07',
+                                                   '2012-01-08',
+                                                   '2012-01-09',
+                                                   '2012-01-10',
+                                                   '2012-01-11',
+                                                   '2012-01-12',
+                                                   '2012-01-13']))
+
+        actual = history_from_jira_changelog(source, date(2012, 01, 01))
+
+        assert_series_equal(actual, expected)
 
     def testGetArrivals(self):
         """

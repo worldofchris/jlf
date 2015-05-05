@@ -13,7 +13,7 @@ from jira_stats.jira_wrapper import MissingState, MissingConfigItem
 from pandas.util.testing import assert_frame_equal
 
 import mock
-from jira_stats.test.jira_mocks import mockHistory, mockItem, START_STATE, END_STATE
+from jira_stats.test.jira_mocks import mockHistory, mockItem, mockChangelog, START_STATE, END_STATE, CREATED_STATE
 import copy
 
 import jira.client
@@ -56,12 +56,6 @@ class MockFields(object):
         self.created = created
         self.summary = None
         self.status = MockStatus(name='In Progress')
-
-
-class MockChangelog(object):
-
-    def __init__(self, histories):
-        self.histories = histories
 
 
 class MockIssue(object):
@@ -138,7 +132,7 @@ class TestGetMetrics(unittest.TestCase):
                                   project_name='Portal',
                                   issuetype_name='Defect',
                                   created='2012-01-01',
-                                  change_log=MockChangelog([mockHistory(u'2012-11-12T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                  change_log=mockChangelog([mockHistory(u'2012-11-12T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                             mockHistory(u'2012-11-12T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                             mockHistory(u'2012-11-12T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])),
                         MockIssue(key='OPSTOOLS-2',
@@ -146,7 +140,7 @@ class TestGetMetrics(unittest.TestCase):
                                   project_name='Portal',
                                   issuetype_name='Defect',
                                   created='2012-01-01',
-                                  change_log=MockChangelog([mockHistory(u'2012-11-04T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                  change_log=mockChangelog([mockHistory(u'2012-11-04T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                             mockHistory(u'2012-11-04T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                             mockHistory(u'2012-11-04T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])),
                         MockIssue(key='OPSTOOLS-3',
@@ -154,7 +148,7 @@ class TestGetMetrics(unittest.TestCase):
                                   project_name='Portal',
                                   issuetype_name='Defect',
                                   created='2012-01-01',
-                                  change_log=MockChangelog([mockHistory(u'2012-10-08T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                  change_log=mockChangelog([mockHistory(u'2012-10-08T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                             mockHistory(u'2012-10-08T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                             mockHistory(u'2012-10-08T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])]))],
         'Portal':      [MockIssue(key='PORTAL-1',
@@ -162,7 +156,7 @@ class TestGetMetrics(unittest.TestCase):
                                   project_name='Portal',
                                   issuetype_name='Defect',
                                   created='2012-01-01',
-                                  change_log=MockChangelog([mockHistory(u'2012-11-12T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                  change_log=mockChangelog([mockHistory(u'2012-11-12T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                             mockHistory(u'2012-11-12T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                             mockHistory(u'2012-11-12T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])),
                         MockIssue(key='PORTAL-2',
@@ -170,7 +164,7 @@ class TestGetMetrics(unittest.TestCase):
                                   project_name='Portal',
                                   issuetype_name='Defect',
                                   created='2012-01-01',
-                                  change_log=MockChangelog([mockHistory(u'2012-11-04T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                  change_log=mockChangelog([mockHistory(u'2012-11-04T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                             mockHistory(u'2012-11-04T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                             mockHistory(u'2012-11-04T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])),
                         MockIssue(key='PORTAL-3',
@@ -178,7 +172,7 @@ class TestGetMetrics(unittest.TestCase):
                                   project_name='Portal',
                                   issuetype_name='Defect',
                                   created='2012-01-01',
-                                  change_log=MockChangelog([mockHistory(u'2012-10-08T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                  change_log=mockChangelog([mockHistory(u'2012-10-08T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                             mockHistory(u'2012-10-08T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                             mockHistory(u'2012-10-08T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])]))],
         'Reports':     [MockIssue(key='REPORTS-1',
@@ -186,7 +180,7 @@ class TestGetMetrics(unittest.TestCase):
                                   project_name='Portal',
                                   issuetype_name='Data Request',
                                   created='2012-01-01',
-                                  change_log=MockChangelog([mockHistory(u'2012-10-08T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                  change_log=mockChangelog([mockHistory(u'2012-10-08T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                             mockHistory(u'2012-10-08T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                             mockHistory(u'2012-10-08T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])),
                         MockIssue(key='REPORTS-2',
@@ -194,7 +188,7 @@ class TestGetMetrics(unittest.TestCase):
                                   project_name='Portal',
                                   issuetype_name='Improve Feature',
                                   created='2012-01-01',
-                                  change_log=MockChangelog([mockHistory(u'2012-11-04T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                  change_log=mockChangelog([mockHistory(u'2012-11-04T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                             mockHistory(u'2012-11-04T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                             mockHistory(u'2012-11-04T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])),
                         MockIssue(key='REPORTS-3',
@@ -202,7 +196,7 @@ class TestGetMetrics(unittest.TestCase):
                                   project_name='Portal',
                                   issuetype_name='Improve Feature',
                                   created='2012-01-01',
-                                  change_log=MockChangelog([mockHistory(u'2012-11-12T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                  change_log=mockChangelog([mockHistory(u'2012-11-12T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                             mockHistory(u'2012-11-12T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                             mockHistory(u'2012-11-12T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])]))],
         'Demand Test': [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2011-12-26'),
@@ -437,7 +431,7 @@ class TestGetMetrics(unittest.TestCase):
                                                         project_name='Portal',
                                                         issuetype_name=issue_type,
                                                         created='2012-01-01',
-                                                        change_log=MockChangelog([mockHistory(u'{date}T09:54:29.284+0000'.format(date=resolved),
+                                                        change_log=mockChangelog([mockHistory(u'{date}T09:54:29.284+0000'.format(date=resolved),
                                                                                               [mockItem('status',
                                                                                                         'queued',
                                                                                                         END_STATE)])])))
@@ -605,15 +599,15 @@ class TestGetMetrics(unittest.TestCase):
                                               issuetype_name='Improve Feature',
                                               created='2012-01-01')]}
 
-        dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+        dummy_issues['Reports'][0].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                               mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                               mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-        dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+        dummy_issues['Reports'][1].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                               mockHistory(u'2012-01-04T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                               mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-        dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+        dummy_issues['Reports'][2].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                               mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                               mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
@@ -657,15 +651,15 @@ class TestGetMetrics(unittest.TestCase):
                                               issuetype_name='Improve Feature',
                                               created='2012-01-01')]}
 
-        dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+        dummy_issues['Reports'][0].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                               mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                               mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-        dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+        dummy_issues['Reports'][1].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                               mockHistory(u'2012-01-04T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                               mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
-        dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+        dummy_issues['Reports'][2].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                                                               mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
                                                               mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
 
@@ -707,7 +701,7 @@ class TestGetMetrics(unittest.TestCase):
                                       issuetype_name='Defect',
                                       created='2012-01-01')]}
 
-        dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'QA Queue')]),
+        dummy_issues['Ops Tools'][0].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'QA Queue')]),
                                                                 mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'QA Queue', 'Customer Approval')])])
 
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
@@ -798,35 +792,35 @@ class TestGetMetrics(unittest.TestCase):
             }
         # 0-5
 
-        dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+        dummy_issues['Ops Tools'][0].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
                                                                 mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        dummy_issues['Ops Tools'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+        dummy_issues['Ops Tools'][1].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
                                                                 mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
         # 6-10
 
-        dummy_issues['Ops Tools'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+        dummy_issues['Ops Tools'][2].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
                                                                 mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        dummy_issues['Portal'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+        dummy_issues['Portal'][0].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
                                                              mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        dummy_issues['Portal'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+        dummy_issues['Portal'][1].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
                                                              mockHistory(u'2012-01-08T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        dummy_issues['Portal'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+        dummy_issues['Portal'][2].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
                                                              mockHistory(u'2012-01-09T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+        dummy_issues['Reports'][0].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
                                                               mockHistory(u'2012-01-09T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
         # 11-12
 
-        dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+        dummy_issues['Reports'][1].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
                                                               mockHistory(u'2012-01-10T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+        dummy_issues['Reports'][2].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
                                                               mockHistory(u'2012-01-15T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
@@ -871,12 +865,11 @@ class TestGetMetrics(unittest.TestCase):
 
         # 0-5
 
-        dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+        dummy_issues['Ops Tools'][0].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
                                                                 mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-        dummy_issues['Portal'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+        dummy_issues['Portal'][1].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
                                                              mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', 'In Progress', 'pending')])])
-
 
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
 
@@ -911,7 +904,7 @@ class TestGetMetrics(unittest.TestCase):
                                       resolution_date='2012-11-10',
                                       project_name='Portal',
                                       issuetype_name='Defect',
-                                      created='2012-01-01'),
+                                      created='2011-01-01'),
                             MockIssue(key='OPSTOOLS-2',
                                       resolution_date='2012-11-12',
                                       project_name='Portal',
@@ -941,22 +934,22 @@ class TestGetMetrics(unittest.TestCase):
 
         # Failure
 
-        dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Ops Tools'][0].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                                                mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', START_STATE, 'Customer Approval')])])
 
-        dummy_issues['Ops Tools'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                                mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Ops Tools'][1].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                                                mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', START_STATE, 'Customer Approval')])])
 
         # Value
 
-        dummy_issues['Reports'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                              mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Reports'][0].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                                              mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', START_STATE, 'Customer Approval')])])
 
-        dummy_issues['Reports'][1].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                              mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Reports'][1].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                                              mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', START_STATE, 'Customer Approval')])])
 
-        dummy_issues['Reports'][2].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
-                                                              mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
+        dummy_issues['Reports'][2].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                                              mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', START_STATE, 'Customer Approval')])])
 
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
 
@@ -971,6 +964,9 @@ class TestGetMetrics(unittest.TestCase):
         ]
 
         expected_frame = pd.DataFrame(expected).set_index('bucket')
+
+        print actual_frame
+        print expected_frame
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
@@ -1000,7 +996,7 @@ class TestGetMetrics(unittest.TestCase):
                                       issuetype_name='Defect',
                                       created='2012-01-01')]}
 
-        dummy_issues['Ops Tools'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
+        dummy_issues['Ops Tools'][0].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
                                                                 mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
 
@@ -1126,14 +1122,14 @@ class TestGetMetrics(unittest.TestCase):
         jira_config['counts_towards_throughput'] = ''
         jira_config['cycles'] = {'develop': {
             'start': START_STATE,
-            'exit': 'Customer Approval'
+            'exit': START_STATE
             }
         }
 
         dummy_issues = {'done': [MockIssue(key='PORTAL-1', resolution_date='2012-11-10', project_name='Portal', issuetype_name='Defect', created='2012-01-01')]}
-        dummy_issues['done'][0].changelog = MockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', START_STATE, 'In Progress')]),
-                                                           mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')]),
-                                                           mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'Customer Approval', 'Done')])])
+        dummy_issues['done'][0].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', CREATED_STATE, START_STATE)]),
+                                                           mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', START_STATE, 'Customer Approval')]),
+                                                           mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', 'Customer Approval', 'Done')])])
 
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
 
