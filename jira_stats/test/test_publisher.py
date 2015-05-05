@@ -22,9 +22,10 @@ import xlrd
 import zipfile
 import filecmp
 
+
 def serve_dummy_results(*args, **kwargs):
 
-    return pd.DataFrame([1,2,3])
+    return pd.DataFrame([1, 2, 3])
 
 
 def serve_dummy_throughput(*args, **kwargs):
@@ -37,13 +38,14 @@ def serve_dummy_throughput(*args, **kwargs):
 
         else:
 
-            dummy = pd.DataFrame([[1,2,3],[4,5,6]])
+            dummy = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
             dummy.columns = ['one', 'two', 'three']
             return dummy
 
     except KeyError:
 
         return pd.DataFrame({'one': [1, 2, 3]})
+
 
 def serve_dummy_detail(*args, **kwargs):
 
@@ -56,10 +58,11 @@ def serve_dummy_detail(*args, **kwargs):
 
     else:
 
-        dummy = pd.DataFrame([['TICKET-1','Dummy Ticket',3]])
+        dummy = pd.DataFrame([['TICKET-1', 'Dummy Ticket', 3]])
         dummy.columns = ['id', 'name', 'cycle time']
 
     return dummy
+
 
 def serve_dummy_cfd_data(*args, **kwargs):
 
@@ -73,7 +76,7 @@ def serve_dummy_cfd_data(*args, **kwargs):
 class TestGetOutput(unittest.TestCase):
 
     def setUp(self):
-      
+
         self.mock_jira_wrapper = mock.Mock(spec=JiraWrapper)
         self.mock_jira_wrapper.throughput.side_effect = serve_dummy_throughput
         self.mock_jira_wrapper.demand.side_effect = serve_dummy_results
@@ -82,7 +85,7 @@ class TestGetOutput(unittest.TestCase):
         self.mock_jira_wrapper.issues.side_effect = serve_dummy_detail
 
         self.mock_jira_wrapper.cfd.side_effect = serve_dummy_cfd_data
-        
+
         self.workspace = tempfile.mkdtemp()
 
     def testSmokeOutCommandLine(self):
@@ -116,12 +119,9 @@ class TestGetOutput(unittest.TestCase):
                          'format':   'xlsx',
                          'location': self.workspace,
                          'counts_towards_throughput': [],
-                         'types': {
-                            'failure': ['Bug', 'Fault'],
-                            'value': ['New Feature', 'Story', 'Improvement'],
-                            'oo': ['Task', 'Decision', 'User Support', 'Spike']
-                        }
-        }
+                         'types': {'failure': ['Bug', 'Fault'],
+                                   'value': ['New Feature', 'Story', 'Improvement'],
+                                   'oo': ['Task', 'Decision', 'User Support', 'Spike']}}
 
         # Specify categories and types to report on or:
         # foreach - to report on each category separately
@@ -152,20 +152,17 @@ class TestGetOutput(unittest.TestCase):
                          'reports':  [{'metric':     'cumulative-throughput',
                                        'categories': 'foreach',
                                        'types':      'foreach'}],
-                        'format':   'xlsx',
-                        'counts_towards_throughput': [],
-                        'location': self.workspace,
-                         'types': {
-                            'failure': ['Bug', 'Fault'],
-                            'value': ['New Feature', 'Story', 'Improvement'],
-                            'oo': ['Task', 'Decision', 'User Support', 'Spike']
-                        }}
+                         'format':   'xlsx',
+                         'counts_towards_throughput': [],
+                         'location': self.workspace,
+                         'types': {'failure': ['Bug', 'Fault'],
+                                   'value': ['New Feature', 'Story', 'Improvement'],
+                                   'oo': ['Task', 'Decision', 'User Support', 'Spike']}}
 
         publisher.publish(report_config,
                           self.mock_jira_wrapper,
                           from_date=date(2012, 10, 8),
-                          to_date=date(2012, 11, 12))        
-
+                          to_date=date(2012, 11, 12))
 
         expected_filename = 'reports.xlsx'
         actual_output = os.path.join(self.workspace, expected_filename)
@@ -177,7 +174,6 @@ class TestGetOutput(unittest.TestCase):
         workbook = xlrd.open_workbook(actual_output)
         self.assertEqual('cumulative-throughput', workbook.sheet_names()[0])
 
-
     def testOutputFailureDemandToExcel(self):
 
         report_config = {'name':     'reports',
@@ -187,18 +183,14 @@ class TestGetOutput(unittest.TestCase):
                          'format':   'xlsx',
                          'location': self.workspace,
                          'counts_towards_throughput': [],
-                         'types': {
-                            'failure': ['Bug', 'Fault'],
-                            'value': ['New Feature', 'Story', 'Improvement'],
-                            'oo': ['Task', 'Decision', 'User Support', 'Spike']
-                        }
-        }
+                         'types': {'failure': ['Bug', 'Fault'],
+                                   'value': ['New Feature', 'Story', 'Improvement'],
+                                   'oo': ['Task', 'Decision', 'User Support', 'Spike']}}
 
         publisher.publish(report_config,
                           self.mock_jira_wrapper,
                           from_date=date(2012, 10, 8),
-                          to_date=date(2012, 11, 12))        
-
+                          to_date=date(2012, 11, 12))
 
         expected_filename = 'reports.xlsx'
         actual_output = os.path.join(self.workspace, expected_filename)
@@ -221,18 +213,14 @@ class TestGetOutput(unittest.TestCase):
                          'format':   'xlsx',
                          'counts_towards_throughput': [],
                          'location': self.workspace,
-                            'types': {
-                            'failure': ['Bug', 'Fault'],
-                            'value': ['New Feature', 'Story', 'Improvement'],
-                            'oo': ['Task', 'Decision', 'User Support', 'Spike']
-                        }
-        }
+                         'types': {'failure': ['Bug', 'Fault'],
+                                   'value': ['New Feature', 'Story', 'Improvement'],
+                                   'oo': ['Task', 'Decision', 'User Support', 'Spike']}}
 
         publisher.publish(report_config,
                           self.mock_jira_wrapper,
                           from_date=date(2012, 10, 8),
-                          to_date=date(2012, 11, 12))        
-
+                          to_date=date(2012, 11, 12))
 
         expected_filename = 'reports.xlsx'
         actual_output = os.path.join(self.workspace, expected_filename)
@@ -249,7 +237,7 @@ class TestGetOutput(unittest.TestCase):
 
         fields = report_config['reports'][0]['fields']
         for i in range(len(fields)):
-            self.assertEqual(sheet.cell_value(0,i+1), fields[i])
+            self.assertEqual(sheet.cell_value(0, i+1), fields[i])
 
         # and test sorted by week-done...
         # and test when no fields specified
@@ -267,8 +255,7 @@ class TestGetOutput(unittest.TestCase):
         publisher.publish(report_config,
                           self.mock_jira_wrapper,
                           from_date=date(2012, 10, 8),
-                          to_date=date(2012, 11, 12))        
-
+                          to_date=date(2012, 11, 12))
 
         expected_filename = 'reports.xlsx'
         actual_output = os.path.join(self.workspace, expected_filename)
@@ -279,7 +266,6 @@ class TestGetOutput(unittest.TestCase):
 
         workbook = xlrd.open_workbook(actual_output)
         self.assertEqual('value-develop-cycle-time', workbook.sheet_names()[0])
-
 
     def testOutputCFDToExcel(self):
 
@@ -293,7 +279,7 @@ class TestGetOutput(unittest.TestCase):
         publisher.publish(report_config,
                           self.mock_jira_wrapper,
                           from_date=date(2012, 10, 8),
-                          to_date=date(2012, 11, 12))        
+                          to_date=date(2012, 11, 12))
 
         expected_filename = 'reports.xlsx'
         actual_output = os.path.join(self.workspace, expected_filename)
@@ -304,7 +290,6 @@ class TestGetOutput(unittest.TestCase):
 
         workbook = xlrd.open_workbook(actual_output)
         self.assertEqual('cfd', workbook.sheet_names()[0])
-
 
     def testMakeValidSheetTitle(self):
 
@@ -318,7 +303,6 @@ class TestGetOutput(unittest.TestCase):
 
         self.assertEqual(actual_title, expected_title)
 
-
     def testOutputMultipleTypesOfThroughput(self):
 
         report_config = {'name':     'reports',
@@ -328,23 +312,17 @@ class TestGetOutput(unittest.TestCase):
                          'format':   'xlsx',
                          'location': self.workspace,
                          'counts_towards_throughput': [],
-                         'categories': {
-                            'one': 'project = "one"',
-                            'two': 'project = "two"',
-                            'three': 'project = "three"'
-                         },
-                         'types': {
-                            'failure': ['Bug', 'Fault'],
-                            'value': ['New Feature', 'Story', 'Improvement'],
-                            'oo': ['Task', 'Decision', 'User Support', 'Spike']
-                        }
-        }
+                         'categories': {'one': 'project = "one"',
+                                        'two': 'project = "two"',
+                                        'three': 'project = "three"'},
+                         'types': {'failure': ['Bug', 'Fault'],
+                                   'value': ['New Feature', 'Story', 'Improvement'],
+                                   'oo': ['Task', 'Decision', 'User Support', 'Spike']}}
 
         publisher.publish(report_config,
                           self.mock_jira_wrapper,
                           from_date=date(2012, 10, 8),
-                          to_date=date(2012, 11, 12))        
-
+                          to_date=date(2012, 11, 12))
 
         expected_filename = 'reports.xlsx'
         actual_output = os.path.join(self.workspace, expected_filename)
@@ -362,7 +340,7 @@ class TestGetOutput(unittest.TestCase):
         for cell in header_row[1:]:
             self.assertEqual(cell.value, expected_headers[header_row[1:].index(cell)])
 
-
+    @unittest.skip("Unfinished")
     def testOutputArrivalRateToExcel(self):
 
         report_config = {'name':     'reports',
@@ -447,8 +425,7 @@ class TestGetOutput(unittest.TestCase):
                          'reports':  [{'metric': 'cfd',
                                        'format': {'open': {'color': 'green'},
                                                   'in progress': {'color': 'red'},
-                                                  'closed': {'color': 'yellow'}},
-                                      }],
+                                                  'closed': {'color': 'yellow'}}}],
                          'format':   'xlsx',
                          'location': self.workspace}
 
@@ -468,7 +445,6 @@ class TestGetOutput(unittest.TestCase):
     def testHistoryToExcel(self):
         pass
 
-
     def compareExcelFiles(self, actual_output, expected_filename):
 
         # Sadly reading of xlsx files with their formatting by xlrd is not supported.
@@ -479,8 +455,8 @@ class TestGetOutput(unittest.TestCase):
 
         cmp_files = ['xl/worksheets/sheet1.xml',
                      'xl/sharedStrings.xml',
-                     'xl/styles.xml', 
-                     'xl/workbook.xml', 
+                     'xl/styles.xml',
+                     'xl/workbook.xml',
                      'xl/theme/theme1.xml']
 
         expected_workspace = os.path.join(self.workspace, 'expected')
@@ -500,5 +476,3 @@ class TestGetOutput(unittest.TestCase):
             expected_full_path = os.path.join(expected_workspace, cmp_file)
             actual_full_path = os.path.join(actual_workspace, cmp_file)
             self.assertTrue(filecmp.cmp(expected_full_path, actual_full_path), '{0}:{1}'.format(expected_full_path, actual_full_path))
-
-
