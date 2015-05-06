@@ -518,7 +518,7 @@ class TestGetMetrics(unittest.TestCase):
                                                      index=['2011-12-26', '2012-01-02'])}
 
         expected_frame = pd.DataFrame(expected)
-        expected_frame.index.name = 'week_created'
+        expected_frame.index.name = 'week'
         expected_frame.columns.name = 'swimlane'
 
         our_jira = JiraWrapper(config=jira_config)

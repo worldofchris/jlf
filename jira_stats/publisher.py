@@ -70,7 +70,7 @@ def publish(config, jira, from_date, to_date):
             data = jira.demand(from_date, to_date, types)
 
         if report['metric'] == 'detail':
-            # It seems inconsistent that 'done' does not allow you to specify a date range.
+            # It seems inconsistent that 'detail' does not allow you to specify a date range.
             # If it did then all the metric functions could have the same interface
             # so making this code DRYer and more succinct
             if 'fields' in report:

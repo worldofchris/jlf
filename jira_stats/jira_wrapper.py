@@ -215,6 +215,7 @@ class JiraWrapper(object):
         table = pd.tools.pivot.pivot_table(df, rows=['week_created'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
 
         reindexed = table.reindex(index=fill_date_index_blanks(table.index), fill_value=np.int64(0))
+        reindexed.index.name = "week"
         return reindexed
 
     def throughput(self,
