@@ -23,16 +23,16 @@ _state_default_colours = ['#8dd3c7',
                           '#ccebc5',
                           '#ffed6f']
 
+
 def publish(config, jira, from_date, to_date):
-    
+
     writer = None
 
     if config['format'] == 'xlsx':
         excel_basename = config['name']
-        excel_filename = os.path.join(config['location'], 
+        excel_filename = os.path.join(config['location'],
                                       excel_basename + '.xlsx')
         writer = pd.ExcelWriter(excel_filename, engine='xlsxwriter')
-
 
     for report in config['reports']:
 
@@ -61,7 +61,7 @@ def publish(config, jira, from_date, to_date):
             data = jira.throughput(from_date, to_date, cumulative=True, types=types)
 
         if report['metric'] == 'cfd':
-            data = jira.cfd(from_date, to_date)
+            data = jira.cfd(from_date, to_date, types=types)
 
         if report['metric'] == 'demand':
             types = None
@@ -111,7 +111,37 @@ def publish(config, jira, from_date, to_date):
 
                 sheet_name.append(report['metric'])
 
-                data.to_excel(writer, worksheet_title('-'.join(sheet_name)))
+                worksheet_name = worksheet_title('-'.join(sheet_name))
+                data.to_excel(writer, worksheet_name)
+
+                if 'graph' in report:
+                    graph_type = 'column'
+                    if 'type' in report['graph']:
+                        graph_type = report['graph']['type']
+                    workbook = writer.book
+                    chart = workbook.add_chart({'type': graph_type})
+
+                    column_idx = 1
+                    for index, value in data.iteritems():
+
+                        chart.add_series({'values': '={worksheet_name}!{from_cell}:{to_cell}'.format(worksheet_name=worksheet_name,
+                                                                                                     from_cell=xl_rowcol_to_cell(2, column_idx),
+                                                                                                     to_cell=xl_rowcol_to_cell(len(value) + 1, column_idx)),
+                                          'categories': '={worksheet_name}!{from_cell}:{to_cell}'.format(worksheet_name=worksheet_name,
+                                                                                                         from_cell=xl_rowcol_to_cell(2, 0),
+                                                                                                         to_cell=xl_rowcol_to_cell(len(value) + 1, 0)),
+                                          'name': '{0} {1}'.format(report['metric'], index)})
+                        column_idx += 1
+                    sheets = [sheet for sheet in workbook.worksheets() if sheet.name == worksheet_name]
+
+                    chart.set_x_axis({'name': 'Week',
+                                      'text_axis': True,
+                                      'num_format': 'dd/mm/yyyy'})
+
+                    sheets[0].insert_chart(xl_rowcol_to_cell(1, column_idx + 1), chart)
+
+                    # Make date column visible
+                    sheets[0].set_column(0, 0, 20)
 
                 if report['metric'] == 'cfd':
                     if 'format' in report:
@@ -119,10 +149,11 @@ def publish(config, jira, from_date, to_date):
                     else:
                         formats = format_states(config['states'])
                     workbook = writer.book
-                    sheets = [sheet for sheet in workbook.worksheets() if sheet.name == 'cfd']
+                    sheets = [sheet for sheet in workbook.worksheets() if sheet.name[-3:] == 'cfd']
                     # Do the colouring in
 
-                    colour_cfd(workbook, sheets[0], data, formats)
+                    for sheet in sheets:
+                        colour_cfd(workbook, sheet, data, formats)
 
                 ### WARNING CUT AND PASTE ALERT!
 
@@ -132,19 +163,19 @@ def publish(config, jira, from_date, to_date):
                     else:
                         formats = format_states(config['states'])
                     workbook = writer.book
-                    sheets = [sheet for sheet in workbook.worksheets() if sheet.name == 'history']
+                    sheets = [sheet for sheet in workbook.worksheets() if sheet.name[-7:] == 'history']
                     # Do the colouring in
-
-                    colour_cfd(workbook, sheets[0], data, formats)
-
+                    for sheet in sheets:
+                        colour_cfd(workbook, sheet, data, formats)
 
     if isinstance(writer, pd.ExcelWriter):
         writer.save()
 
+
 def format_states(states):
 
     formats = {}
-    
+
     for index, state in enumerate(states):
         try:
             formats[state] = {'color': _state_default_colours[index]}
@@ -155,6 +186,7 @@ def format_states(states):
             formats[state] = {'color': _state_default_colours[rebased_index]}
 
     return formats
+
 
 def colour_cfd(workbook, worksheet, data, formats):
 
@@ -175,6 +207,7 @@ def colour_cfd(workbook, worksheet, data, formats):
                 worksheet.write(cell_ref, cell, workbook_formats[color])
             except KeyError:
                 pass
+
 
 def worksheet_title(full_title):
     """

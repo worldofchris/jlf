@@ -531,7 +531,7 @@ class TestGetMetrics(unittest.TestCase):
 
         # needs to deal with blanks!
 
-    def testGetMitchells(self):
+    def testGetHistory(self):
 
         """
         After Benjamin Mitchell's item history tracking:
@@ -625,6 +625,85 @@ class TestGetMetrics(unittest.TestCase):
         expected_frame = pd.DataFrame(expected)
 
         actual_frame = our_jira.history(until_date=date(2012, 1, 8))
+
+        assert_frame_equal(actual_frame, expected_frame), actual_frame
+
+    def testFilterHistoryByType(self):
+        """
+        To date History, and so CFD are for _all_ issues.  Want to be
+        able to report on Value / Failure / Overhead separately
+        """
+
+        expected = {'REPORTS-1': pd.Series(['In Progress',
+                                            'In Progress',
+                                            'pending',
+                                            'pending',
+                                            'pending',
+                                            'pending',
+                                            'Customer Approval'],
+                                           index=pd.to_datetime(['2012-01-01',
+                                                                 '2012-01-02',
+                                                                 '2012-01-03',
+                                                                 '2012-01-04',
+                                                                 '2012-01-05',
+                                                                 '2012-01-06',
+                                                                 '2012-01-07'])),
+                    'REPORTS-2': pd.Series(['In Progress',
+                                            'In Progress',
+                                            'In Progress',
+                                            'pending',
+                                            'pending',
+                                            'Customer Approval',
+                                            'Customer Approval'],
+                                           index=pd.to_datetime(['2012-01-01',
+                                                                 '2012-01-02',
+                                                                 '2012-01-03',
+                                                                 '2012-01-04',
+                                                                 '2012-01-05',
+                                                                 '2012-01-06',
+                                                                 '2012-01-07']))}
+
+        dummy_issues = {'Reports': [MockIssue(key='REPORTS-1',
+                                              resolution_date='2012-11-10',
+                                              project_name='Portal',
+                                              issuetype_name='Report',
+                                              created='2012-01-01'),
+                                    MockIssue(key='REPORTS-2',
+                                              resolution_date='2012-11-12',
+                                              project_name='Portal',
+                                              issuetype_name='Feature',
+                                              created='2012-01-01'),
+                                    MockIssue(key='REPORTS-3',
+                                              resolution_date='2012-10-10',
+                                              project_name='Portal',
+                                              issuetype_name='Defect',
+                                              created='2012-01-01')]}
+
+        dummy_issues['Reports'][0].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                                              mockHistory(u'2012-01-03T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+                                                              mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+
+        dummy_issues['Reports'][1].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                                              mockHistory(u'2012-01-04T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+                                                              mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+
+        dummy_issues['Reports'][2].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
+                                                              mockHistory(u'2012-01-06T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
+                                                              mockHistory(u'2012-01-07T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])])
+
+        jira_config = copy.copy(self.jira_config)
+        expected_frame = pd.DataFrame(expected)
+
+        jira_config['categories'] = {'Reports': 'Reports'}
+        jira_config['types'] = {'value': ['Report', 'Feature'],
+                                'failure': ['Defect']}
+        jira_config['until_date'] = '2012-01-08'
+
+        self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
+
+        our_jira = JiraWrapper(config=jira_config)
+
+        actual_frame = our_jira.history(until_date=date(2012, 1, 8), types=["value"])
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
@@ -973,9 +1052,6 @@ class TestGetMetrics(unittest.TestCase):
         ]
 
         expected_frame = pd.DataFrame(expected).set_index('bucket')
-
-        print actual_frame
-        print expected_frame
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 

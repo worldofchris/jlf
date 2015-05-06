@@ -16,7 +16,7 @@ details we don't want to present to the user.
 import jira.client
 import sys
 
-from datetime import date, timedelta, datetime
+from datetime import date, datetime
 
 import pandas as pd
 import numpy as np
@@ -121,7 +121,6 @@ class JiraWrapper(object):
             pass
 
         self.all_issues = None
-        self.issue_history = None
 
     def issue(self, key):
         if self.all_issues is None:
@@ -145,35 +144,34 @@ class JiraWrapper(object):
         else:
             return df.filter(fields)
 
-    def history(self, from_date=None, until_date=None):
+    def history(self, from_date=None, until_date=None, types=None):
 
-        if self.issue_history is None:
+        if self.all_issues is None:
+            self.all_issues = self._issues_from_jira()
 
-            if self.all_issues is None:
-                self.all_issues = self._issues_from_jira()
+        history = {}
 
-            history = {}
+        for issue in self.all_issues:
 
-            for issue in self.all_issues:
-
+            if types is None:
                 history[issue.key] = issue.history
+            else:
+                for type_grouping in types:
+                    if issue.fields.issuetype.name in self.types[type_grouping]:
+                        history[issue.key] = issue.history
 
-            self.issue_history = history
+        if history is not None:
+            df = pd.DataFrame(history)
+            return df
 
-        df = pd.DataFrame(self.issue_history)
+        return None
 
-        return df
-
-    def cfd(self, from_date=None, until_date=None):
+    def cfd(self, from_date=None, until_date=None, types=None):
         """
         Cumulative Flow Diagram
         """
 
-        if self.issue_history is None:
-
-            self.history(from_date, until_date)
-
-        cfd = pd.DataFrame(self.issue_history)
+        cfd = self.history(from_date, until_date, types)
 
         days = {}
 
@@ -233,12 +231,11 @@ class JiraWrapper(object):
         allows us the most options as to where to place the 'finishing line'
         """
 
-        if self.issue_history is None:
-            self.history(from_date, to_date)
+        issue_history = self.history(from_date, to_date)
 
         issue_rows = []
 
-        for issue_key in self.issue_history:
+        for issue_key in issue_history:
 
             issue = self.issue(issue_key)
 
@@ -257,10 +254,12 @@ class JiraWrapper(object):
                     if f.issuetype.name in self.types[type_grouping]:
                         swimlane = swimlane + '-' + type_grouping
                     else:
-                        pass
+                        continue
                         # print "Not counting " + f.issuetype.name
+                if swimlane == issue.category:
+                    continue
 
-            for day, state in self.issue_history[issue_key].iteritems():
+            for day, state in issue_history[issue_key].iteritems():
                 if day.weekday() == self.throughput_dow:
 
                     if state in self.counts_towards_throughput:

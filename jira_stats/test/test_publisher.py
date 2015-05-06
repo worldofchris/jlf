@@ -202,7 +202,7 @@ class TestGetOutput(unittest.TestCase):
         workbook = xlrd.open_workbook(actual_output)
         self.assertEqual('failure-demand', workbook.sheet_names()[0])
 
-    def testOutputDoneToExcel(self):
+    def testOutputDetailToExcel(self):
 
         report_config = {'name':     'reports',
                          'reports':  [{'metric':     'detail',
@@ -444,6 +444,27 @@ class TestGetOutput(unittest.TestCase):
     @unittest.skip("TODO")
     def testHistoryToExcel(self):
         pass
+
+    def testCumulativeThroughputGraph(self):
+        report_config = {'name':     'reports',
+                         'reports':  [{'metric':     'cumulative-throughput',
+                                       'categories': 'foreach',
+                                       'types':      'foreach',
+                                       'graph':      'yes'}],
+                         'format':   'xlsx',
+                         'counts_towards_throughput': [],
+                         'location': self.workspace,
+                         'types': {'failure': ['Bug', 'Fault'],
+                                   'value': ['New Feature', 'Story', 'Improvement'],
+                                   'oo': ['Task', 'Decision', 'User Support', 'Spike']}}
+
+        publisher.publish(report_config,
+                          self.mock_jira_wrapper,
+                          from_date=date(2012, 10, 8),
+                          to_date=date(2012, 11, 12))
+
+
+################################################################################################################
 
     def compareExcelFiles(self, actual_output, expected_filename):
 
