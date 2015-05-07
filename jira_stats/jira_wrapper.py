@@ -469,24 +469,35 @@ class JiraWrapper(object):
                             if 'exit' in self.cycles[cycle]:
                                 exit_state = self.cycles[cycle]['exit']
 
-                            if 'end' in self.cycles[cycle]:
-                                end_state = self.cycles[cycle]['end']
-
                             if 'include' in self.cycles[cycle]:
                                 include_states = self.cycles[cycle]['include']
 
                             if 'exclude' in self.cycles[cycle]:
                                 exclude_states = self.cycles[cycle]['exclude']
 
+                            if 'end' in self.cycles[cycle]:
+                                end_state = self.cycles[cycle]['end']
+
                                 setattr(issue,
                                         cycle,
                                         cycle_time(issue.history,
                                                    start_state=start_state,
                                                    after_state=after_state,
-                                                   exit_state=exit_state,
-                                                   end_state=end_state,
                                                    include_states=include_states,
-                                                   exclude_states=exclude_states, 
+                                                   exclude_states=exclude_states,
+                                                   end_state=self.cycles[cycle]['end'],
+                                                   reopened_state=reopened_state))
+
+                            else:
+
+                                setattr(issue,
+                                        cycle,
+                                        cycle_time(issue.history,
+                                                   start_state=start_state,
+                                                   after_state=after_state,
+                                                   include_states=include_states,
+                                                   exclude_states=exclude_states,
+                                                   exit_state=exit_state,
                                                    reopened_state=reopened_state))
 
                     except AttributeError:
