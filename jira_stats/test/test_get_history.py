@@ -162,6 +162,83 @@ class TestIssueHistory(unittest.TestCase):
         self.assertEquals(cycle_time(history,
                                      after_state='queued'), 11)
 
+    def testGetCycleTimeForIncludedStates(self):
+        """
+        For cases where cycle starts by exiting one or more states and
+        ends by entering one or more states we measure the cycle by recording
+        number of days in the states we are interested in.
+        """
+
+        history = pd.Series([CREATED_STATE,
+                             'queued',
+                             'one',
+                             'two',
+                             'two',
+                             'three',
+                             'three',
+                             'three',
+                             END_STATE,
+                             'two',
+                             'four',
+                             'five',
+                             END_STATE],
+                            index=pd.to_datetime(['2012-01-01',
+                                                  '2012-01-02',
+                                                  '2012-01-03',
+                                                  '2012-01-04',
+                                                  '2012-01-05',
+                                                  '2012-01-06',
+                                                  '2012-01-07',
+                                                  '2012-01-08',
+                                                  '2012-01-09',
+                                                  '2012-01-10',
+                                                  '2012-01-11',
+                                                  '2012-01-12',
+                                                  '2012-01-13']))
+
+        self.assertEquals(cycle_time(history,
+                                     include_states=['one', 'two', 'three']), 7)
+
+    def testGetCycleTimeForExcludedStates(self):
+        """
+        Like included states above but expressed as the inverse - i.e. the states
+        we are not interested in.
+        """
+
+        history = pd.Series([CREATED_STATE,
+                             'queued',
+                             'one',
+                             'two',
+                             'two',
+                             'three',
+                             'three',
+                             'three',
+                             END_STATE,
+                             'two',
+                             'four',
+                             'five',
+                             END_STATE],
+                            index=pd.to_datetime(['2012-01-01',
+                                                  '2012-01-02',
+                                                  '2012-01-03',
+                                                  '2012-01-04',
+                                                  '2012-01-05',
+                                                  '2012-01-06',
+                                                  '2012-01-07',
+                                                  '2012-01-08',
+                                                  '2012-01-09',
+                                                  '2012-01-10',
+                                                  '2012-01-11',
+                                                  '2012-01-12',
+                                                  '2012-01-13']))
+
+        self.assertEquals(cycle_time(history,
+                                     exclude_states=[CREATED_STATE,
+                                                     'queued',
+                                                     'four',
+                                                     'five',
+                                                     END_STATE]), 7)
+
     def testGetDaysInStates(self):
         """
         Work is getting stuck in CA for ages.  We want to see for how long.

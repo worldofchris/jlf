@@ -15,12 +15,32 @@ def cycle_time(history,
                after_state=None,
                end_state=END_STATE,
                exit_state=None,
-               reopened_state=REOPENED_STATE):
+               reopened_state=REOPENED_STATE,
+               include_states=None,
+               exclude_states=None):
 
     """Calculate how long it has taken an issue to get from START_STATE
        to END_STATE.  If we want to count from the date an issue was created
        we need to specify the date the issue was created and the CREATED_STATE
        if different from the default."""
+
+    if include_states is not None:
+
+        count = 0
+        for day in history:
+            if day in include_states:
+                count += 1
+
+        return count
+
+    if exclude_states is not None:
+
+        count = 0
+        for day in history:
+            if day not in exclude_states:
+                count += 1
+
+        return count
 
     start_date = None
     end_date = None
