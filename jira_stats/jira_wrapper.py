@@ -452,6 +452,10 @@ class JiraWrapper(object):
                             reopened_state = None
                             after_state = None
                             start_state = None
+                            exit_state = None
+                            end_state = None
+                            include_states = None
+                            exclude_states = None
 
                             if 'ignore' in self.cycles[cycle]:
                                 reopened_state = self.cycles[cycle]['ignore']
@@ -463,21 +467,26 @@ class JiraWrapper(object):
                                 start_state = self.cycles[cycle]['start']
 
                             if 'exit' in self.cycles[cycle]:
+                                exit_state = self.cycles[cycle]['exit']
+
+                            if 'end' in self.cycles[cycle]:
+                                end_state = self.cycles[cycle]['end']
+
+                            if 'include' in self.cycles[cycle]:
+                                include_states = self.cycles[cycle]['include']
+
+                            if 'exclude' in self.cycles[cycle]:
+                                exclude_states = self.cycles[cycle]['exclude']
 
                                 setattr(issue,
                                         cycle,
                                         cycle_time(issue.history,
                                                    start_state=start_state,
                                                    after_state=after_state,
-                                                   exit_state=self.cycles[cycle]['exit'],
-                                                   reopened_state=reopened_state))
-                            else:
-                                setattr(issue,
-                                        cycle,
-                                        cycle_time(issue.history,
-                                                   start_state=start_state,
-                                                   after_state=after_state,
-                                                   end_state=self.cycles[cycle]['end'],
+                                                   exit_state=exit_state,
+                                                   end_state=end_state,
+                                                   include_states=include_states,
+                                                   exclude_states=exclude_states, 
                                                    reopened_state=reopened_state))
 
                     except AttributeError:
