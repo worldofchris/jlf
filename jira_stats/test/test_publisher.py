@@ -463,6 +463,11 @@ class TestGetOutput(unittest.TestCase):
                           from_date=date(2012, 10, 8),
                           to_date=date(2012, 11, 12))
 
+    def testSeriesName(self):
+
+        expected_name = "Features"
+        actual_name = publisher.series_name("bigcorp-features")
+        self.assertEqual(actual_name, expected_name)
 
 ################################################################################################################
 

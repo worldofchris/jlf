@@ -121,22 +121,24 @@ def publish(config, jira, from_date, to_date):
                     workbook = writer.book
                     chart = workbook.add_chart({'type': graph_type})
 
+                    chart.set_title({'name': report['metric'].title()})
                     column_idx = 1
                     for index, value in data.iteritems():
-
                         chart.add_series({'values': '={worksheet_name}!{from_cell}:{to_cell}'.format(worksheet_name=worksheet_name,
                                                                                                      from_cell=xl_rowcol_to_cell(2, column_idx),
                                                                                                      to_cell=xl_rowcol_to_cell(len(value) + 1, column_idx)),
                                           'categories': '={worksheet_name}!{from_cell}:{to_cell}'.format(worksheet_name=worksheet_name,
                                                                                                          from_cell=xl_rowcol_to_cell(2, 0),
                                                                                                          to_cell=xl_rowcol_to_cell(len(value) + 1, 0)),
-                                          'name': '{0} {1}'.format(report['metric'], index)})
+                                          'name': series_name(index)})
                         column_idx += 1
                     sheets = [sheet for sheet in workbook.worksheets() if sheet.name == worksheet_name]
 
                     chart.set_x_axis({'name': 'Week',
                                       'text_axis': True,
                                       'num_format': 'dd/mm/yyyy'})
+
+                    chart.set_size({'width': 720, 'height': 576})
 
                     sheets[0].insert_chart(xl_rowcol_to_cell(1, column_idx + 1), chart)
 
@@ -207,6 +209,13 @@ def colour_cfd(workbook, worksheet, data, formats):
                 worksheet.write(cell_ref, cell, workbook_formats[color])
             except KeyError:
                 pass
+
+
+def series_name(swimlane):
+
+    name = swimlane[swimlane.find('-')+1:]
+    name = name.title()
+    return name
 
 
 def worksheet_title(full_title):
