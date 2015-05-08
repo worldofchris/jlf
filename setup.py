@@ -25,6 +25,7 @@ setup(
     install_requires=[
         'argparse==1.2.1',
         'ipython==0.13.2',
+        'fogbugz',
         'jira',
         'numpy',
         'openpyxl==1.6.2',
