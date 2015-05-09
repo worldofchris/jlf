@@ -1,10 +1,12 @@
 import json
+from datetime import datetime
 
 
 class WorkItem(object):
 
-    def __init__(self, id, state, history):
+    def __init__(self, id, title, state, history):
         self.id = id
+        self.title = title
         self.state = state
         self.history = history
 
@@ -15,5 +17,16 @@ class WorkItem(object):
         return "{0}:{1}:{2}".format(self.id, self.state, self.history)
 
     def to_JSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__,
+
+        def json_serial(obj):
+            """JSON serializer for objects not serializable by default json code"""
+
+            if isinstance(obj, datetime):
+                serial = obj.isoformat()
+                return serial
+
+            else:
+                return obj.__dict__
+
+        return json.dumps(self, default=json_serial,
                           sort_keys=True, indent=4)
