@@ -27,6 +27,7 @@ class TestGetMetrics(unittest.TestCase):
         expected = WorkItem(id="1838",
                             state="Closed (Fixed)",
                             title="Engine not working, throwing up this for no reason",
+                            type="Bug",
                             history=[{'from': "Active",
                                       'timestamp': "2015-03-07T10:02:06+00:00",
                                       'to': "Resolved (Fixed)"}])
@@ -109,6 +110,8 @@ class TestGetMetrics(unittest.TestCase):
         mock_fogbugz_client.search.assert_called_with(config['categories']['all'])
 
         self.assertEqual(len(actual), 3)
+
+##############################################################################################
 
     def serve_dummy_cases(self, query):
 

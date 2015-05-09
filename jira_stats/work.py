@@ -4,10 +4,11 @@ from datetime import datetime
 
 class WorkItem(object):
 
-    def __init__(self, id, title, state, history):
+    def __init__(self, id, title, state, type, history):
         self.id = id
         self.title = title
         self.state = state
+        self.type = type
         self.history = history
 
     def __str__(self):

@@ -59,6 +59,7 @@ class FogbugzWrapper(object):
         work_item = WorkItem(id=case.ixbug.text,
                              title=case.stitle.string,
                              state=str(case.sstatus.text),
+                             type=case.scategory.text,
                              history=state_history)
 
         return work_item
