@@ -26,8 +26,6 @@ from index import fill_date_index_blanks, week_start_date
 from history import time_in_states, cycle_time, arrivals, history_from_jira_changelog
 from bucket import bucket_labels
 
-from collections import Counter
-
 
 class MissingState(Exception):
 
