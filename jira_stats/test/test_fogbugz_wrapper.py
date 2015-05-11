@@ -5,7 +5,7 @@ import unittest
      # Going to need to change the name of this package
 from jira_stats.fogbugz_wrapper import FogbugzWrapper, evtResolved, evtEdited
 from jira_stats.work import WorkItem
-from datetime import date, datetime
+from datetime import datetime
 import mock
 import os
 

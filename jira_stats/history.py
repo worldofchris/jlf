@@ -216,3 +216,33 @@ def arrivals(histories, add_to=None):
                     arrivals[day][item.toString] += 1
 
     return arrivals
+
+
+def history_from_state_transitions(start_date, state_transitions, end_date):
+    """
+    Get a daily history of states based on state transitions
+    """
+
+    history = []
+
+    to_state = None
+
+    last_date = start_date
+    for state in state_transitions:
+        date = state['timestamp'].date()
+
+        num_days = (date - last_date).days
+        for n in range(0, num_days):
+            history.append(state['from'])
+
+        last_date = date
+        to_state = state['to']
+
+    num_days = (end_date - last_date).days
+
+    for n in range(0, num_days + 1):
+        history.append(to_state)
+
+    dates = [start_date + timedelta(days=x) for x in range(0, (end_date - start_date).days + 1)]
+
+    return pd.Series(history, index=dates)

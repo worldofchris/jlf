@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-from jira_stats.history import cycle_time, time_in_states, arrivals, history_from_jira_changelog
+from jira_stats.history import cycle_time, time_in_states, arrivals, history_from_jira_changelog, history_from_state_transitions
 from jira_stats.test.jira_mocks import mockHistory, mockItem, mockChangelog, CREATED_STATE, START_STATE, END_STATE, REOPENED_STATE
 
 import unittest
 from datetime import date
+import dateutil.parser
 
 import pandas as pd
 from pandas.util.testing import assert_series_equal
@@ -353,3 +354,57 @@ class TestIssueHistory(unittest.TestCase):
                           date(2012, 11, 22): {'Customer Review': 2}}
 
         self.assertEquals(actual, expected_twice)
+
+    def testGetHistoryFromStateTransitions(self):
+
+        state_transitions = [{'from': "Open",
+                                      'timestamp': dateutil.parser.parse("2015-02-26T10:02:06+00:00"),
+                                      'to': "Insane"},
+                             {'from': "Insane",
+                                      'timestamp': dateutil.parser.parse("2015-02-26T10:02:06+00:00"),
+                                      'to': "Active"},
+                             {'from': "Active",
+                                      'timestamp': dateutil.parser.parse("2015-03-07T10:02:06+00:00"),
+                                      'to': "Resolved (Fixed)"},
+                             {'from': "Resolved (Fixed)",
+                                      'timestamp': dateutil.parser.parse("2015-03-12T10:02:06+00:00"),
+                                      'to': "Closed"}]
+
+        expected = pd.Series(['Open',
+                              'Active',
+                              'Active',
+                              'Active',
+                              'Active',
+                              'Active',
+                              'Active',
+                              'Active',
+                              'Active',
+                              'Active',
+                              'Resolved (Fixed)',
+                              'Resolved (Fixed)',
+                              'Resolved (Fixed)',
+                              'Resolved (Fixed)',
+                              'Resolved (Fixed)',
+                              'Closed'],                           
+                             index=pd.to_datetime(['2015-02-25',
+                                                   '2015-02-26',
+                                                   '2015-02-27',
+                                                   '2015-02-28',
+                                                   '2015-03-01',
+                                                   '2015-03-02',
+                                                   '2015-03-03',
+                                                   '2015-03-04',
+                                                   '2015-03-05',
+                                                   '2015-03-06',
+                                                   '2015-03-07',
+                                                   '2015-03-08',
+                                                   '2015-03-09',
+                                                   '2015-03-10',
+                                                   '2015-03-11',
+                                                   '2015-03-12']))
+
+        actual = history_from_state_transitions(dateutil.parser.parse("2015-02-25T10:02:06+00:00").date(),
+                                                state_transitions,
+                                                dateutil.parser.parse("2015-03-12T10:02:06+00:00").date())
+
+        assert_series_equal(actual, expected)
