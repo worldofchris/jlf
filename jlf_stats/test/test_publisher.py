@@ -14,8 +14,8 @@ import tempfile
 import os
 from subprocess import call
 import mock
-from jira_stats.jira_wrapper import JiraWrapper
-from jira_stats import publisher
+from jlf_stats.jira_wrapper import JiraWrapper
+from jlf_stats import publisher
 from datetime import date
 import pandas as pd
 import xlrd

@@ -3,8 +3,8 @@
 Get forward looking metrics from JIRA
 """
 
-from jira_stats.jira_wrapper import JiraWrapper, MissingState, MissingConfigItem
-from jira_stats import publisher
+from jlf_stats.jira_wrapper import JiraWrapper, MissingState, MissingConfigItem
+from jlf_stats import publisher
 
 import json
 from datetime import datetime, timedelta

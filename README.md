@@ -304,7 +304,7 @@ Where `CONFIG_FILE` is the path to your config file and `NUM_WEEKS` is the numbe
 
 * To run a single test, specify the path to the module, the Test Case Class Name and the test Case Name.  e.g.
 
-        nosetests jira_stats.test.test_jira_wrapper:TestGetMetrics.testGetArrivalRate
+        nosetests jlf_stats.test.test_jira_wrapper:TestGetMetrics.testGetArrivalRate
 
 ## Configuring OAuth access to JIRA
 

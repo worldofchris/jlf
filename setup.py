@@ -1,6 +1,7 @@
 from setuptools import setup
 from setuptools.command.build_ext import build_ext as _build_ext
 
+
 class build_ext(_build_ext):
     # Taken from http://stackoverflow.com/a/21621689/1064619
     def finalize_options(self):
@@ -11,14 +12,14 @@ class build_ext(_build_ext):
         self.include_dirs.append(numpy.get_include())
 
 setup(
-    name="JIRA lean forward",
+    name="Just lean forward",
     version="0.1.2dev",
-    description="Get Lean Stats like throughput and cycle time out of jira with ease",
+    description="Get Lean Stats like throughput and cycle time out of Jira/FogBugz with ease",
     author="Chris Young",
     license="LICENSE.md",
     author_email="chris@chrisyoung.org",
     platforms=["Any"],
-    packages=['jira_stats'],
+    packages=['jlf_stats'],
     include_package_data=True,
     scripts=['bin/jlf'],
     setup_requires=['numpy'],
@@ -35,6 +36,6 @@ setup(
         'six==1.3.0',
         'xlrd==0.9.2',
         'xlwt==0.7.5',
-        'XlsxWriter==0.5.7'        
+        'XlsxWriter'
     ]
 )

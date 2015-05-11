@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from jira_stats.history import cycle_time, time_in_states, arrivals, history_from_jira_changelog, history_from_state_transitions
-from jira_stats.test.jira_mocks import mockHistory, mockItem, mockChangelog, CREATED_STATE, START_STATE, END_STATE, REOPENED_STATE
+from jlf_stats.history import cycle_time, time_in_states, arrivals, history_from_jira_changelog, history_from_state_transitions
+from jlf_stats.test.jira_mocks import mockHistory, mockItem, mockChangelog, CREATED_STATE, START_STATE, END_STATE, REOPENED_STATE
 
 import unittest
 from datetime import date

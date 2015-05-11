@@ -5,15 +5,15 @@ import pandas as pd
 import numpy as np
 
 from datetime import date
-from jira_stats.jira_wrapper import JiraWrapper
-from jira_stats.index import fill_date_index_blanks, week_start_date
-from jira_stats.bucket import bucket_labels
-from jira_stats.jira_wrapper import MissingState, MissingConfigItem
+from jlf_stats.jira_wrapper import JiraWrapper
+from jlf_stats.index import fill_date_index_blanks, week_start_date
+from jlf_stats.bucket import bucket_labels
+from jlf_stats.jira_wrapper import MissingState, MissingConfigItem
 
 from pandas.util.testing import assert_frame_equal
 
 import mock
-from jira_stats.test.jira_mocks import mockHistory, mockItem, mockChangelog, START_STATE, END_STATE, CREATED_STATE
+from jlf_stats.test.jira_mocks import mockHistory, mockItem, mockChangelog, START_STATE, END_STATE, CREATED_STATE
 import copy
 
 import jira.client
