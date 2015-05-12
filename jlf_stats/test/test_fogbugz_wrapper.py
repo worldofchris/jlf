@@ -110,13 +110,13 @@ class TestGetMetrics(unittest.TestCase):
         our_fogbugz = FogbugzWrapper(config)
         actual = our_fogbugz.work_items()
 
-        mock_fogbugz_client.search.assert_called_with(config['categories']['all'])
+        mock_fogbugz_client.search.assert_called_with(q='*', cols='ixBug,dtOpened,dtClosed,sTitle,sStatus,sCategory,minievents')
 
         self.assertEqual(len(actual), 3)
 
 ##############################################################################################
 
-    def serve_dummy_cases(self, query):
+    def serve_dummy_cases(self, q=None, cols=None):
 
         filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data/cases.xml")
 

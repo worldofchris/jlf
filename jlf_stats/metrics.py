@@ -85,14 +85,19 @@ class Metrics(object):
         for work_item in self.work_items:
 
             if types is None:
-                # HACK HACK HACK This is going to break JIRA
+                # HACK HACK HACK
                 # Also need some consistency around thing_date and date_thing
-                history[work_item.id] = history_from_state_transitions(work_item.date_created.date(), work_item.history, until_date)
+                if isinstance(self.source, JiraWrapper):
+                    history[work_item.id] = work_item.history
+                else:
+                    history[work_item.id] = history_from_state_transitions(work_item.date_created.date(), work_item.history, until_date)
             else:
                 for type_grouping in types:
-                    if work_item.type in self.types[type_grouping]:
-                        # HACK HACK HACK This is going to break JIRA
-                        history[work_item.id] = history_from_state_transitions(work_item.date_created.date(), work_item.history, until_date)
+                    if work_item.type in self.types[type_grouping]: 
+                        if isinstance(self.source, JiraWrapper):
+                            history[work_item.id] = work_item.history
+                        else:
+                            history[work_item.id] = history_from_state_transitions(work_item.date_created.date(), work_item.history, until_date)
 
         if history is not None:
             df = pd.DataFrame(history)
