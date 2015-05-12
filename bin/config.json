@@ -1,8 +1,11 @@
 {
-    "server": "https://worldofchris.atlassian.net",
-    "authentication": {
-        "username": "readonly",
-        "password": "WTFFTW!"
+    "source": { 
+        "type": "jira",
+        "server": "https://worldofchris.atlassian.net",
+        "authentication": {
+            "username": "readonly",
+            "password": "WTFFTW!"
+        }
     },
     "cycles": {
         "develop": {

@@ -43,10 +43,12 @@ class FogbugzWrapper(object):
 
         state_history = []
 
-        # store the closed date!
-        closed_date = None
-        if case.dtclosed.text:
-            closed_date = dateutil.parser.parse(case.dtclosed.text)
+        date_created = dateutil.parser.parse(case.dtopened.text)
+
+        # # store the closed date!
+        # closed_date = None
+        # if case.dtclosed.text:
+        #     closed_date = dateutil.parser.parse(case.dtclosed.text)
 
         for event in case.minievents.childGenerator():
 
@@ -60,6 +62,8 @@ class FogbugzWrapper(object):
                              title=case.stitle.string,
                              state=str(case.sstatus.text),
                              type=case.scategory.text,
+                             date_created=date_created,
+                             category='wat',
                              history=state_history)
 
         return work_item

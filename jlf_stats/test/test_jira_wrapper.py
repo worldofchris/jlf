@@ -8,7 +8,10 @@ from datetime import date
 from jlf_stats.jira_wrapper import JiraWrapper
 from jlf_stats.index import fill_date_index_blanks, week_start_date
 from jlf_stats.bucket import bucket_labels
-from jlf_stats.jira_wrapper import MissingState, MissingConfigItem
+
+from jlf_stats.exceptions import MissingState, MissingConfigItem
+
+from jlf_stats.metrics import Metrics
 
 from pandas.util.testing import assert_frame_equal
 
@@ -105,11 +108,12 @@ class TestGetMetrics(unittest.TestCase):
     states = ['In Progress', 'pending', 'Customer Approval']
 
     jira_config = {
-        'server': 'jiratron.worldofchris.com',
-        'authentication': {
-            'username': 'mrjira',
-            'password': 'foo'
-        },
+        'source': {'type': 'jira',
+                   'server': 'jiratron.worldofchris.com',
+                   'authentication': {
+                       'username': 'mrjira',
+                       'password': 'foo'
+                   }},
         'categories': categories,
         'cycles': cycles,
         'types': types,
@@ -256,10 +260,10 @@ class TestGetMetrics(unittest.TestCase):
         Issues can be queried by key
         """
 
-        our_jira = JiraWrapper(config=self.jira_config)
-        issue = our_jira.issue('OPSTOOLS-1')
+        our_jira = Metrics(config=self.jira_config)
+        work_item = our_jira.work_item('OPSTOOLS-1')
 
-        self.assertEqual(issue.category, "Ops Tools")
+        self.assertEqual(work_item.category, "Ops Tools")
 
     def testGetCumulativeThroughputTable(self):
         """
@@ -297,7 +301,7 @@ class TestGetMetrics(unittest.TestCase):
         jira_config = copy.copy(self.jira_config)
         jira_config['until_date'] = '2012-11-13'
 
-        our_jira = JiraWrapper(config=jira_config)
+        our_jira = Metrics(config=jira_config)
 
         actual_frame = our_jira.throughput(cumulative=True,
                                            from_date=date(2012, 01, 01),
@@ -313,7 +317,7 @@ class TestGetMetrics(unittest.TestCase):
         jira_config = copy.copy(self.jira_config)
         jira_config['until_date'] = '2012-11-13'
 
-        our_jira = JiraWrapper(config=jira_config)
+        our_jira = Metrics(config=jira_config)
 
         expected_1 = {'Ops Tools': pd.Series([np.int64(1),
                                               np.int64(1),
@@ -492,7 +496,7 @@ class TestGetMetrics(unittest.TestCase):
 
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
 
-        our_jira = JiraWrapper(config=jira_config)
+        our_jira = Metrics(config=jira_config)
 
         # We typically are not interested in this data cumulatively as we want to compare how we are split on a week by week basis
 
@@ -521,7 +525,7 @@ class TestGetMetrics(unittest.TestCase):
         expected_frame.index.name = 'week'
         expected_frame.columns.name = 'swimlane'
 
-        our_jira = JiraWrapper(config=jira_config)
+        our_jira = Metrics(config=jira_config)
 
         actual_frame = our_jira.demand(from_date=date(2012, 01, 01),
                                        to_date=date(2012, 12, 31),
@@ -621,7 +625,7 @@ class TestGetMetrics(unittest.TestCase):
 
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
 
-        our_jira = JiraWrapper(config=jira_config)
+        our_jira = Metrics(config=jira_config)
         expected_frame = pd.DataFrame(expected)
 
         actual_frame = our_jira.history(until_date=date(2012, 1, 8))
@@ -701,7 +705,7 @@ class TestGetMetrics(unittest.TestCase):
 
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
 
-        our_jira = JiraWrapper(config=jira_config)
+        our_jira = Metrics(config=jira_config)
 
         actual_frame = our_jira.history(until_date=date(2012, 1, 8), types=["value"])
 
@@ -761,13 +765,14 @@ class TestGetMetrics(unittest.TestCase):
                     pd.to_datetime('2012-01-06'): pd.Series(['pending', 'pending', 'Customer Approval'], index=[0, 1, 2]),
                     pd.to_datetime('2012-01-07'): pd.Series(['Customer Approval', 'Customer Approval', 'Customer Approval'], index=[0, 1, 2])}
 
-        our_jira = JiraWrapper(config=jira_config)
+        our_jira = Metrics(config=jira_config)
 
         expected_frame = pd.DataFrame(expected)
         actual_frame = our_jira.cfd(until_date=date(2012, 1, 8))
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
+    @unittest.skip("WIP - Come back to this after I've refactored the tests.  Not sure this metric is actually useful.")
     def testGetArrivalRate(self):
         """
         What rate does work transition into a specific state?
@@ -794,7 +799,7 @@ class TestGetMetrics(unittest.TestCase):
 
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
 
-        our_jira = JiraWrapper(config=jira_config)
+        our_jira = Metrics(config=jira_config)
 
         expected = {
             pd.to_datetime('2012-01-02'): {'QA Queue': np.int64(1), 'Customer Approval': np.int64(1)}
@@ -913,7 +918,7 @@ class TestGetMetrics(unittest.TestCase):
 
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
 
-        our_jira = JiraWrapper(config=jira_config)
+        our_jira = Metrics(config=jira_config)
         actual_frame = our_jira.cycle_time_histogram(cycle='develop', buckets=[0, 6, 11, 'max'])
 
         expected = [
@@ -961,7 +966,7 @@ class TestGetMetrics(unittest.TestCase):
 
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
 
-        our_jira = JiraWrapper(config=jira_config)
+        our_jira = Metrics(config=jira_config)
         actual_frame = our_jira.cycle_time_histogram(cycle='develop', buckets=[0, 2, 4])
 
         expected = [
@@ -1041,7 +1046,7 @@ class TestGetMetrics(unittest.TestCase):
 
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
 
-        our_jira = JiraWrapper(config=jira_config)
+        our_jira = Metrics(config=jira_config)
 
         actual_frame = our_jira.cycle_time_histogram(cycle='develop', types=['value', 'failure'], buckets=[0, 2, 5, 6])
 
@@ -1084,9 +1089,8 @@ class TestGetMetrics(unittest.TestCase):
         dummy_issues['Ops Tools'][0].changelog = mockChangelog([mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', 'In Progress')]),
                                                                 mockHistory(u'2012-01-02T09:54:29.284+0000', [mockItem('status', 'In Progress', 'Customer Approval')])])
 
-
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
-        our_jira = JiraWrapper(config=jira_config)
+        our_jira = Metrics(config=jira_config)
 
         self.assertRaises(MissingState, our_jira.cfd, until_date=date(2012, 1, 8))
 
@@ -1094,7 +1098,7 @@ class TestGetMetrics(unittest.TestCase):
 
         jira_config = copy.copy(self.jira_config)
         jira_config.pop('types', None)
-        self.assertRaises(MissingConfigItem, JiraWrapper, config=jira_config)
+        self.assertRaises(MissingConfigItem, Metrics, config=jira_config)
 
     @unittest.skip("Skipping so I can commit the mock refactoring")
     def testGetTotalsInStates(self):
@@ -1124,22 +1128,25 @@ class TestGetMetrics(unittest.TestCase):
         """
 
         basic_jira_config = {
-            "server": "https://worldofchris.atlassian.net",
+            "source": {
+                "type": "jira",
+                "server": "https://worldofchris.atlassian.net",
+                "authentication": {
+                    "username": "mrjira",
+                    "password": "234214234324"
+                }
+            },
             "categories": [],
             "cycles": [],
             "types": [],
             "counts_towards_throughput": [],
-            "authentication": {
-                "username": "mrjira",
-                "password": "234214234324"
-            }
         }
 
         our_jira = JiraWrapper(config=basic_jira_config)
 
-        self.mock_jira.JIRA.assert_called_with({'server': basic_jira_config['server']},
-                                               basic_auth=(basic_jira_config['authentication']['username'],
-                                                           basic_jira_config['authentication']['password']))
+        self.mock_jira.JIRA.assert_called_with({'server': basic_jira_config['source']['server']},
+                                               basic_auth=(basic_jira_config['source']['authentication']['username'],
+                                                           basic_jira_config['source']['authentication']['password']))
 
         # What can we meaningfully assert here?
 
@@ -1152,17 +1159,20 @@ class TestGetMetrics(unittest.TestCase):
         key_cert = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'key.pem')
 
         oauth_jira_config = {
-            "server": "https://worldofchris.atlassian.net",
+            "source": {
+                "type": "jira",
+                "server": "https://worldofchris.atlassian.net",
+                "authentication": {
+                    'access_token': 'In3d5YsFmqRTDJah2gg5sNH0WM2ekKzA',
+                    'access_token_secret': '9COeo40njrZGgMU8GjqjdEpKye6TLDXJ',
+                    'consumer_key': 'jlf',
+                    'key_cert': key_cert
+                },
+            },
             "categories": [],
             "cycles": [],
             "types": [],
-            "counts_towards_throughput": [END_STATE],
-            "authentication": {
-                'access_token': 'In3d5YsFmqRTDJah2gg5sNH0WM2ekKzA',
-                'access_token_secret': '9COeo40njrZGgMU8GjqjdEpKye6TLDXJ',
-                'consumer_key': 'jlf',
-                'key_cert': key_cert
-            }
+            "counts_towards_throughput": [END_STATE]
         }
 
         with open(key_cert, 'r') as key_cert_file:
@@ -1170,10 +1180,10 @@ class TestGetMetrics(unittest.TestCase):
 
         our_jira = JiraWrapper(config=oauth_jira_config)
 
-        self.mock_jira.JIRA.assert_called_with({'server': oauth_jira_config['server']},
-                                               oauth={'access_token': oauth_jira_config['authentication']['access_token'],
-                                                      'access_token_secret': oauth_jira_config['authentication']['access_token_secret'],
-                                                      'consumer_key': oauth_jira_config['authentication']['consumer_key'],
+        self.mock_jira.JIRA.assert_called_with({'server': oauth_jira_config['source']['server']},
+                                               oauth={'access_token': oauth_jira_config['source']['authentication']['access_token'],
+                                                      'access_token_secret': oauth_jira_config['source']['authentication']['access_token_secret'],
+                                                      'consumer_key': oauth_jira_config['source']['authentication']['consumer_key'],
                                                       'key_cert': key_cert_data})
 
     def testMissingKeyCertFile(self):
@@ -1218,11 +1228,11 @@ class TestGetMetrics(unittest.TestCase):
 
         self.set_dummy_issues(issues=dummy_issues, queries=jira_config['categories'], config=jira_config)
 
-        our_jira = JiraWrapper(config=jira_config)
+        our_jira = Metrics(config=jira_config)
 
         expected = [{'id': 'PORTAL-1', 'develop': 1}]
         expected_frame = pd.DataFrame(expected).sort_index(axis=1, ascending=False)
 
-        actual_frame = our_jira.issues(fields=['id', 'develop'])
+        actual_frame = our_jira.details(fields=['id', 'develop'])
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame

@@ -18,35 +18,10 @@ import sys
 
 from datetime import date, datetime
 
-import pandas as pd
-import numpy as np
-import math
-
-from index import fill_date_index_blanks, week_start_date
-from history import time_in_states, cycle_time, arrivals, history_from_jira_changelog
-from bucket import bucket_labels
-
-
-class MissingState(Exception):
-
-    def __init__(self, expr, msg):
-        self.expr = expr
-        self.msg = msg
-
-    def __str__(self):
-
-        return self.msg
-
-
-class MissingConfigItem(Exception):
-
-    def __init__(self, expr, msg):
-        self.expr = expr
-        self.msg = msg
-
-    def __str__(self):
-
-        return self.msg
+from index import week_start_date
+from history import time_in_states, cycle_time, history_from_jira_changelog
+from exceptions import MissingConfigItem
+from work import WorkItem
 
 
 class JiraWrapper(object):
@@ -59,14 +34,16 @@ class JiraWrapper(object):
         authentication = None
 
         try:
-            authentication = config['authentication']
+            source = config['source']
         except KeyError as e:
             raise MissingConfigItem(e, "Missing Config Item:{0}".format(e))
 
         self.jira = None
 
+        authentication = source['authentication']
+
         if 'username' in authentication and 'password' in authentication:
-            self.jira = jira.client.JIRA({'server': config['server']},
+            self.jira = jira.client.JIRA({'server': source['server']},
                                          basic_auth=(authentication['username'],
                                                      authentication['password']))
         elif ('access_token' in authentication and
@@ -80,7 +57,7 @@ class JiraWrapper(object):
             except IOError:
                 raise MissingConfigItem('key_cert', "key_cert not found:{0}". format(authentication['key_cert']))
 
-            self.jira = jira.client.JIRA({'server': config['server']},
+            self.jira = jira.client.JIRA({'server': source['server']},
                                          oauth={'access_token': authentication['access_token'],
                                                 'access_token_secret': authentication['access_token_secret'],
                                                 'consumer_key': authentication['consumer_key'],
@@ -91,306 +68,28 @@ class JiraWrapper(object):
         self.categories = None
         self.cycles = None
         self.types = None
-        self.states = []
         self.until_date = None
 
         if 'until_date' in config:
             self.until_date = datetime.strptime(config['until_date'], '%Y-%m-%d').date()
 
-        if 'throughput_dow' in config:
-            self.throughput_dow = config['throughput_dow']
-        else:
-            self.throughput_dow = 4
-
         try:
             self.categories = config['categories']
             self.cycles = config['cycles']
-            self.types = config['types']
-            self.counts_towards_throughput = config['counts_towards_throughput']
         except KeyError as e:
             raise MissingConfigItem(e.message, "Missing Config Item:{0}".format(e.message))
 
-        # Optional
-
-        try:
-            self.states = config['states']
-            self.states.append(None)
-        except KeyError:
-            pass
-
         self.all_issues = None
 
-    def issue(self, key):
-        if self.all_issues is None:
-            self.all_issues = self._issues_from_jira()
-
-        matches = [issue for issue in self.all_issues if issue.key == key]
-        return matches[0]
-
-    def issues(self, fields=None):
+    def work_items(self):
         """
         All issues
         """
         if self.all_issues is None:
             self.all_issues = self._issues_from_jira()
 
-        issue_rows = self._issues_as_rows(self.all_issues)
-        df = pd.DataFrame(issue_rows)
+        return self.all_issues
 
-        if fields is None:
-            return df
-        else:
-            return df.filter(fields)
-
-    def history(self, from_date=None, until_date=None, types=None):
-
-        if self.all_issues is None:
-            self.all_issues = self._issues_from_jira()
-
-        history = {}
-
-        for issue in self.all_issues:
-
-            if types is None:
-                history[issue.key] = issue.history
-            else:
-                for type_grouping in types:
-                    if issue.fields.issuetype.name in self.types[type_grouping]:
-                        history[issue.key] = issue.history
-
-        if history is not None:
-            df = pd.DataFrame(history)
-            return df
-
-        return None
-
-    def cfd(self, from_date=None, until_date=None, types=None):
-        """
-        Cumulative Flow Diagram
-        """
-
-        cfd = self.history(from_date, until_date, types)
-
-        days = {}
-
-        for day in cfd.index:
-            tickets = []
-            for ticket in cfd.ix[day]:
-                tickets.append(ticket)
-
-            def state_order(state):
-
-                try:
-                    return self.states.index(state)
-                except ValueError:
-                    if type(state) == float:
-                        if math.isnan(state):
-                            return -1
-                    if type(state) == np.float64:
-                        if math.isnan(state):
-                            return -1
-
-                    raise MissingState(state, "Missing state:{0}".format(state))
-
-            days[day] = sorted(tickets, key=state_order)
-
-        return pd.DataFrame(days)
-
-    def demand(self,
-               from_date,
-               to_date,
-               types=None):
-        """
-        Return the number of issues created each week - i.e. the demand on the system
-        """
-
-        if self.all_issues is None:
-            self.all_issues = self._issues_from_jira()
-
-        issue_rows = self._issues_as_rows(self.all_issues, types)
-
-        df = pd.DataFrame(issue_rows)
-        table = pd.tools.pivot.pivot_table(df, rows=['week_created'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
-
-        reindexed = table.reindex(index=fill_date_index_blanks(table.index), fill_value=np.int64(0))
-        reindexed.index.name = "week"
-        return reindexed
-
-    def throughput(self,
-                   from_date,
-                   to_date,
-                   cumulative=True,
-                   category=None,
-                   types=None):
-        """
-        Return throughput for all issues in a state where they are considered
-        to count towards throughput.
-
-        Might want to add some additional conditions other than state but state
-        allows us the most options as to where to place the 'finishing line'
-        """
-
-        issue_history = self.history(from_date, to_date)
-
-        issue_rows = []
-
-        for issue_key in issue_history:
-
-            issue = self.issue(issue_key)
-
-            if category is not None:
-
-                if category != issue.category:
-                    continue
-
-            swimlane = issue.category
-
-            # Are we grouping by work type?
-            f = issue.fields
-
-            if types is not None:
-                for type_grouping in types:
-                    if f.issuetype.name in self.types[type_grouping]:
-                        swimlane = swimlane + '-' + type_grouping
-                    else:
-                        continue
-                        # print "Not counting " + f.issuetype.name
-                if swimlane == issue.category:
-                    continue
-
-            for day, state in issue_history[issue_key].iteritems():
-                if day.weekday() == self.throughput_dow:
-
-                    if state in self.counts_towards_throughput:
-
-                        issue_row = {'swimlane': swimlane,
-                                     'id':       issue_key,
-                                     'week':     day,
-                                     'count':    1}
-                        issue_rows.append(issue_row)
-
-        df = pd.DataFrame(issue_rows)
-
-        if len(df.index) > 0:
-
-            table = pd.tools.pivot.pivot_table(df, rows=['week'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
-
-            if cumulative:
-                return table
-
-            else:
-
-                def foo_func(x):
-                    for i in range(x.size-1, 0, -1):
-                        x[i] = x[i] - x[i-1]
-                    return x
-
-                table = table.apply(foo_func)
-
-                return table
-
-        else:
-
-            return None
-
-    def arrival_rate(self,
-                     from_date,
-                     to_date):
-        """
-        So that we can get an idea of the flow of work that has not been completed and so does not have a resolution date
-        and so does not count towards throughput, what is the rate at which that work arrived at states further up the 
-        value chain?
-        """
-
-        if self.all_issues is None:
-            self.all_issues = self._issues_from_jira()
-
-        arrivals_count = {}
-
-        for issue in self.all_issues:
-            try:
-                arrivals_count = arrivals(issue.changelog.histories, arrivals_count)
-            except AttributeError as e:
-                print e
-
-        df = pd.DataFrame.from_dict(arrivals_count, orient='index')
-        df.index = pd.to_datetime(df.index)
-        wf = df.resample('W-MON', how='sum')
-
-        return wf
-
-    def cycle_time_histogram(self,
-                             cycle,
-                             types=None,
-                             buckets=None):
-        """
-        Time taken for work to complete one or more 'cycles' - i.e. transitions from a start state to an end state
-        """
-
-        if self.all_issues is None:
-            self.all_issues = self._issues_from_jira()
-
-        rows = self._issues_as_rows(self.all_issues)
-
-        cycle_time_data = {}
-
-        for row in rows:
-
-            if types is not None:
-
-                include = False
-
-                for type_grouping in types:
-
-                    if row['type'] in self.types[type_grouping]:
-                        include = True
-                        key = "{0}-{1}".format(type_grouping, cycle)
-                        break
-
-                if not include:
-                    continue
-
-            else:
-                key = cycle
-
-            try:
-                if row[cycle] is not None:
-                    if key not in cycle_time_data:
-                        cycle_time_data[key] = [row[cycle]]
-                    else:
-                        cycle_time_data[key].append(row[cycle])
-            except KeyError:
-                continue
-
-        histogram = None
-
-        for cycle in cycle_time_data:
-            if buckets is not None:
-
-                try:
-                    li = buckets.index('max')
-                    buckets[li] = max(cycle_time_data[cycle])
-
-                except ValueError:
-                    pass
-
-                labels = bucket_labels(buckets)
-                count, division = np.histogram(cycle_time_data[cycle], bins=buckets)
-            else:
-
-                count, division = np.histogram(cycle_time_data[cycle])
-                labels = bucket_labels(division)
-
-            cycle_histogram = pd.DataFrame(count, index=labels, columns=[cycle])
-            cycle_histogram.index.name = 'bucket'
-
-            if histogram is None:
-                histogram = cycle_histogram.copy(deep=True)
-            else:
-                old_histogram = histogram.copy(deep=True)
-                histogram = old_histogram.join(cycle_histogram, how='outer')
-
-        return histogram
 
     def totals(self):
         """
@@ -403,7 +102,6 @@ class JiraWrapper(object):
 
         return None
 
-
 ###############################################################################
 # Internal methods
 ###############################################################################
@@ -414,7 +112,7 @@ class JiraWrapper(object):
         """
 
         batch_size = 100
-        issues = []
+        work_items = []
 
         for category in self.categories:
 
@@ -440,69 +138,77 @@ class JiraWrapper(object):
                 for issue in issue_batch:
 
                     issue.category = category
+                    issue_history = None
+                    cycles = {}
 
-                    created_date = datetime.strptime(issue.fields.created[:10], '%Y-%m-%d')
+                    date_created = datetime.strptime(issue.fields.created[:10], '%Y-%m-%d')
+
                     if issue.changelog is not None:
-                        issue.history = history_from_jira_changelog(issue.changelog, created_date, self.until_date)
 
-                    try:
-                        for cycle in self.cycles:
-                            reopened_state = None
-                            after_state = None
-                            start_state = None
-                            exit_state = None
-                            end_state = None
-                            include_states = None
-                            exclude_states = None
+                        issue_history = history_from_jira_changelog(issue.changelog, date_created, self.until_date)
 
-                            if 'ignore' in self.cycles[cycle]:
-                                reopened_state = self.cycles[cycle]['ignore']
+                        try:
 
-                            if 'after' in self.cycles[cycle]:
-                                after_state = self.cycles[cycle]['after']
+                            for cycle in self.cycles:
+                                reopened_state = None
+                                after_state = None
+                                start_state = None
+                                exit_state = None
+                                end_state = None
+                                include_states = None
+                                exclude_states = None
 
-                            if 'start' in self.cycles[cycle]:
-                                start_state = self.cycles[cycle]['start']
+                                if 'ignore' in self.cycles[cycle]:
+                                    reopened_state = self.cycles[cycle]['ignore']
 
-                            if 'exit' in self.cycles[cycle]:
-                                exit_state = self.cycles[cycle]['exit']
+                                if 'after' in self.cycles[cycle]:
+                                    after_state = self.cycles[cycle]['after']
 
-                            if 'include' in self.cycles[cycle]:
-                                include_states = self.cycles[cycle]['include']
+                                if 'start' in self.cycles[cycle]:
+                                    start_state = self.cycles[cycle]['start']
 
-                            if 'exclude' in self.cycles[cycle]:
-                                exclude_states = self.cycles[cycle]['exclude']
+                                if 'exit' in self.cycles[cycle]:
+                                    exit_state = self.cycles[cycle]['exit']
 
-                            if 'end' in self.cycles[cycle]:
-                                end_state = self.cycles[cycle]['end']
+                                if 'include' in self.cycles[cycle]:
+                                    include_states = self.cycles[cycle]['include']
 
-                                setattr(issue,
-                                        cycle,
-                                        cycle_time(issue.history,
-                                                   start_state=start_state,
-                                                   after_state=after_state,
-                                                   include_states=include_states,
-                                                   exclude_states=exclude_states,
-                                                   end_state=self.cycles[cycle]['end'],
-                                                   reopened_state=reopened_state))
+                                if 'exclude' in self.cycles[cycle]:
+                                    exclude_states = self.cycles[cycle]['exclude']
 
-                            else:
+                                if 'end' in self.cycles[cycle]:
+                                    end_state = self.cycles[cycle]['end']
 
-                                setattr(issue,
-                                        cycle,
-                                        cycle_time(issue.history,
-                                                   start_state=start_state,
-                                                   after_state=after_state,
-                                                   include_states=include_states,
-                                                   exclude_states=exclude_states,
-                                                   exit_state=exit_state,
-                                                   reopened_state=reopened_state))
+                                    cycles[cycle] = cycle_time(issue_history,
+                                                               start_state=start_state,
+                                                               after_state=after_state,
+                                                               include_states=include_states,
+                                                               exclude_states=exclude_states,
+                                                               end_state=end_state,
+                                                               reopened_state=reopened_state)
 
-                    except AttributeError:
+                                else:
 
-                        pass
+                                    cycles[cycle] = cycle_time(issue_history,
+                                                               start_state=start_state,
+                                                               after_state=after_state,
+                                                               include_states=include_states,
+                                                               exclude_states=exclude_states,
+                                                               exit_state=exit_state,
+                                                               reopened_state=reopened_state)
 
-                    issues.append(issue)
+                        except AttributeError:
+
+                            pass
+
+                    work_items.append(WorkItem(id=issue.key,
+                                               title=issue.fields.summary,
+                                               state=issue.fields.status.name,
+                                               type=issue.fields.issuetype.name,
+                                               history=issue_history,
+                                               date_created=date_created,
+                                               cycles=cycles,
+                                               category=category))
 
                 if len(issue_batch) < batch_size:
                     break
@@ -510,7 +216,9 @@ class JiraWrapper(object):
                 sys.stdout.write('.')
                 sys.stdout.flush()
 
-        return issues
+        return work_items
+
+    # This is on its way out
 
     def _issues_as_rows(self, issues, types=None):
 

@@ -14,7 +14,7 @@ import tempfile
 import os
 from subprocess import call
 import mock
-from jlf_stats.jira_wrapper import JiraWrapper
+from jlf_stats.metrics import Metrics
 from jlf_stats import publisher
 from datetime import date
 import pandas as pd
@@ -77,14 +77,14 @@ class TestGetOutput(unittest.TestCase):
 
     def setUp(self):
 
-        self.mock_jira_wrapper = mock.Mock(spec=JiraWrapper)
-        self.mock_jira_wrapper.throughput.side_effect = serve_dummy_throughput
-        self.mock_jira_wrapper.demand.side_effect = serve_dummy_results
-        self.mock_jira_wrapper.cycle_time_histogram.side_effect = serve_dummy_results
-        self.mock_jira_wrapper.arrival_rate.side_effect = serve_dummy_results
-        self.mock_jira_wrapper.issues.side_effect = serve_dummy_detail
+        self.mock_metrics = mock.Mock(spec=Metrics)
+        self.mock_metrics.throughput.side_effect = serve_dummy_throughput
+        self.mock_metrics.demand.side_effect = serve_dummy_results
+        self.mock_metrics.cycle_time_histogram.side_effect = serve_dummy_results
+        self.mock_metrics.arrival_rate.side_effect = serve_dummy_results
+        self.mock_metrics.details.side_effect = serve_dummy_detail
 
-        self.mock_jira_wrapper.cfd.side_effect = serve_dummy_cfd_data
+        self.mock_metrics.cfd.side_effect = serve_dummy_cfd_data
 
         self.workspace = tempfile.mkdtemp()
 
@@ -130,7 +130,7 @@ class TestGetOutput(unittest.TestCase):
         # when we publish the metrics for the data in our jira
 
         publisher.publish(report_config,
-                          self.mock_jira_wrapper,
+                          self.mock_metrics,
                           from_date=date(2012, 10, 8),
                           to_date=date(2012, 11, 12))
 
@@ -160,7 +160,7 @@ class TestGetOutput(unittest.TestCase):
                                    'oo': ['Task', 'Decision', 'User Support', 'Spike']}}
 
         publisher.publish(report_config,
-                          self.mock_jira_wrapper,
+                          self.mock_metrics,
                           from_date=date(2012, 10, 8),
                           to_date=date(2012, 11, 12))
 
@@ -188,7 +188,7 @@ class TestGetOutput(unittest.TestCase):
                                    'oo': ['Task', 'Decision', 'User Support', 'Spike']}}
 
         publisher.publish(report_config,
-                          self.mock_jira_wrapper,
+                          self.mock_metrics,
                           from_date=date(2012, 10, 8),
                           to_date=date(2012, 11, 12))
 
@@ -218,7 +218,7 @@ class TestGetOutput(unittest.TestCase):
                                    'oo': ['Task', 'Decision', 'User Support', 'Spike']}}
 
         publisher.publish(report_config,
-                          self.mock_jira_wrapper,
+                          self.mock_metrics,
                           from_date=date(2012, 10, 8),
                           to_date=date(2012, 11, 12))
 
@@ -253,7 +253,7 @@ class TestGetOutput(unittest.TestCase):
                          'location': self.workspace}
 
         publisher.publish(report_config,
-                          self.mock_jira_wrapper,
+                          self.mock_metrics,
                           from_date=date(2012, 10, 8),
                           to_date=date(2012, 11, 12))
 
@@ -277,7 +277,7 @@ class TestGetOutput(unittest.TestCase):
                          'location': self.workspace}
 
         publisher.publish(report_config,
-                          self.mock_jira_wrapper,
+                          self.mock_metrics,
                           from_date=date(2012, 10, 8),
                           to_date=date(2012, 11, 12))
 
@@ -320,7 +320,7 @@ class TestGetOutput(unittest.TestCase):
                                    'oo': ['Task', 'Decision', 'User Support', 'Spike']}}
 
         publisher.publish(report_config,
-                          self.mock_jira_wrapper,
+                          self.mock_metrics,
                           from_date=date(2012, 10, 8),
                           to_date=date(2012, 11, 12))
 
@@ -349,7 +349,7 @@ class TestGetOutput(unittest.TestCase):
                          'location': self.workspace}
 
         publisher.publish(report_config,
-                          self.mock_jira_wrapper,
+                          self.mock_metrics,
                           from_date=date(2012, 10, 8),
                           to_date=date(2012, 11, 12))
 
@@ -408,7 +408,7 @@ class TestGetOutput(unittest.TestCase):
                          'location': self.workspace}
 
         publisher.publish(report_config,
-                          self.mock_jira_wrapper,
+                          self.mock_metrics,
                           from_date=date(2012, 10, 8),
                           to_date=date(2012, 11, 12))
 
@@ -430,7 +430,7 @@ class TestGetOutput(unittest.TestCase):
                          'location': self.workspace}
 
         publisher.publish(report_config,
-                          self.mock_jira_wrapper,
+                          self.mock_metrics,
                           from_date=date(2012, 10, 8),
                           to_date=date(2012, 11, 12))
 
@@ -459,7 +459,7 @@ class TestGetOutput(unittest.TestCase):
                                    'oo': ['Task', 'Decision', 'User Support', 'Spike']}}
 
         publisher.publish(report_config,
-                          self.mock_jira_wrapper,
+                          self.mock_metrics,
                           from_date=date(2012, 10, 8),
                           to_date=date(2012, 11, 12))
 

@@ -77,7 +77,7 @@ def publish(config, jira, from_date, to_date):
                 fields = report['fields']
             else:
                 fields = None
-            data = jira.issues(fields=fields)
+            data = jira.details(fields=fields)
 
         if report['metric'] == 'cycle-time':
             types = None

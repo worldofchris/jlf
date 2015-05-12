@@ -3,13 +3,14 @@
 Get forward looking metrics from JIRA
 """
 
-from jlf_stats.jira_wrapper import JiraWrapper, MissingState, MissingConfigItem
+from jlf_stats.metrics import Metrics
 from jlf_stats import publisher
 
 import json
 from datetime import datetime, timedelta
 import argparse
 import sys
+
 
 def main():
 
@@ -42,11 +43,11 @@ def main():
     if 'until_date' not in config:
         config['until_date'] = datetime.strftime(end_date, '%Y-%m-%d')
 
-    our_jira = JiraWrapper(config=config)
+    metrics = Metrics(config=config)
 
     try:
         publisher.publish(config,
-                          our_jira,
+                          metrics,
                           from_date=start_date.date(),
                           to_date=end_date.date())        
     except MissingState as error:

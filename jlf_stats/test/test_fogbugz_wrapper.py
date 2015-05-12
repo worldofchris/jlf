@@ -6,6 +6,7 @@ import unittest
 from jlf_stats.fogbugz_wrapper import FogbugzWrapper, evtResolved, evtEdited
 from jlf_stats.work import WorkItem
 from datetime import datetime
+from dateutil.tz import tzutc
 import mock
 import os
 
@@ -28,9 +29,11 @@ class TestGetMetrics(unittest.TestCase):
                             state="Closed (Fixed)",
                             title="Engine not working, throwing up this for no reason",
                             type="Bug",
-                            history=[{'from': "Active",
-                                      'timestamp': "2015-03-07T10:02:06+00:00",
-                                      'to': "Resolved (Fixed)"}])
+                            category="wat",
+                            date_created=datetime(2015, 03, 04, 12, 15, 41, tzinfo=tzutc()),
+                            history=[{'from': u'Active',
+                                      'timestamp': datetime(2015, 3, 7, 10, 2, 6, tzinfo=tzutc()),
+                                      'to': u'Resolved (Fixed)'}])
 
         self.assertEqual(actual.to_JSON(), expected.to_JSON())
 
