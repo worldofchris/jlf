@@ -28,7 +28,7 @@ class TestMetrics(unittest.TestCase):
 
         config = {
             'source': {'type': 'jira',
-                       'server': 'jiratron.worldofchris.com',
+                       'server': 'http://jiratron.worldofchris.com',
                        'authentication': {'username': 'mrjira',
                                           'password': 'foo'}},
             'categories': None,
