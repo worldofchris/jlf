@@ -11,7 +11,7 @@ import math
 import exceptions
 from bucket import bucket_labels
 from index import fill_date_index_blanks, week_start_date
-from history import arrivals
+from history import arrivals, history_from_state_transitions
 
 
 class Metrics(object):
@@ -85,11 +85,14 @@ class Metrics(object):
         for work_item in self.work_items:
 
             if types is None:
-                history[work_item.id] = work_item.history
+                # HACK HACK HACK This is going to break JIRA
+                # Also need some consistency around thing_date and date_thing
+                history[work_item.id] = history_from_state_transitions(work_item.date_created.date(), work_item.history, until_date)
             else:
                 for type_grouping in types:
                     if work_item.type in self.types[type_grouping]:
-                        history[work_item.id] = work_item.history
+                        # HACK HACK HACK This is going to break JIRA
+                        history[work_item.id] = history_from_state_transitions(work_item.date_created.date(), work_item.history, until_date)
 
         if history is not None:
             df = pd.DataFrame(history)

@@ -34,10 +34,11 @@ class WorkItem(object):
                   'title': self.title,
                   'state': self.state,
                   'type': self.type,
-                  'date_created': self.date_created}
+                  'date_created': self.date_created.replace(tzinfo=None)} # HACK HACK HACK - for excel's benefit
 
-        for cycle in self.cycles:
-            detail[cycle] = self.cycles[cycle]
+        if self.cycles is not None:
+            for cycle in self.cycles:
+                detail[cycle] = self.cycles[cycle]
 
         return detail
 

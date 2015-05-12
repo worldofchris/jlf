@@ -112,6 +112,7 @@ def publish(config, jira, from_date, to_date):
                 sheet_name.append(report['metric'])
 
                 worksheet_name = worksheet_title('-'.join(sheet_name))
+
                 data.to_excel(writer, worksheet_name)
 
                 if 'graph' in report:

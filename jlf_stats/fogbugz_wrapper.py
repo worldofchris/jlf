@@ -28,7 +28,7 @@ class FogbugzWrapper(object):
         self.responses = []
         for cat in self.categories:
             query = self.categories[cat]
-            self.responses.append(self.fb.search(query))
+            self.responses.append(self.fb.search(q=query, cols="ixBug,dtOpened,dtClosed,sTitle,sStatus,sCategory,minievents"))
 
         self.work_items = []
 
@@ -42,7 +42,6 @@ class FogbugzWrapper(object):
     def work_item_from_xml(self, case):
 
         state_history = []
-
         date_created = dateutil.parser.parse(case.dtopened.text)
 
         # # store the closed date!
