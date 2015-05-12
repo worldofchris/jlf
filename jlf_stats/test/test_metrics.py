@@ -28,9 +28,9 @@ class TestMetrics(unittest.TestCase):
 
         config = {
             'source': {'type': 'jira',
-                       'server': 'http://jiratron.worldofchris.com',
-                       'authentication': {'username': 'mrjira',
-                                          'password': 'foo'}},
+                       'server': 'https://worldofchris.atlassian.net',
+                       'authentication': {'username': 'readonly',
+                                          'password': 'WTFFTW!'}},
             'categories': None,
             'cycles': None,
             'types': None,
