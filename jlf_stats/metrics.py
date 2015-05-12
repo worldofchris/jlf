@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 import math
 
-from exceptions import MissingConfigItem, MissingState
+import exceptions
 from bucket import bucket_labels
 from index import fill_date_index_blanks, week_start_date
 from history import arrivals
@@ -36,7 +36,7 @@ class Metrics(object):
             self.types = config['types']
             self.counts_towards_throughput = config['counts_towards_throughput']
         except KeyError as e:
-            raise MissingConfigItem(e.message, "Missing Config Item:{0}".format(e.message))
+            raise exceptions.MissingConfigItem(e.message, "Missing Config Item:{0}".format(e.message))
 
         # Optional
 
@@ -199,7 +199,7 @@ class Metrics(object):
                         if math.isnan(state):
                             return -1
 
-                    raise MissingState(state, "Missing state:{0}".format(state))
+                    raise exceptions.MissingState(state, "Missing state:{0}".format(state))
 
             days[day] = sorted(tickets, key=state_order)
 
