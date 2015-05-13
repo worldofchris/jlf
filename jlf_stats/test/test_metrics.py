@@ -46,7 +46,7 @@ class TestMetrics(unittest.TestCase):
         """
 
         env_var = 'TEST_PASSWORD'
-        password = 'foobar123'
+        password = 'WTFFTW!'
         os.environ[env_var] = password
 
         config = {
