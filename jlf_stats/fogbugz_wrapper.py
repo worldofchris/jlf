@@ -7,7 +7,7 @@ import fogbugz
 # Event codes from http://help.fogcreek.com/8202/xml-api#Event_Codes
 evtResolved = 14
 evtEdited = 2
-
+evtOpened = 1
 
 class FogbugzWrapper(object):
     """
@@ -54,6 +54,7 @@ class FogbugzWrapper(object):
             transition = self.state_transition(timestamp=dateutil.parser.parse(event.dt.text),
                                                changes=event.schanges.text,
                                                event_code=int(event.evt.text))
+
             if transition is not None:
                 state_history.append(transition)
 
@@ -72,7 +73,11 @@ class FogbugzWrapper(object):
                          timestamp,
                          event_code):
 
-        if event_code == evtResolved:
+        if event_code == evtOpened:
+            from_state = 'New'  # ???
+            to_state = 'Open'
+
+        elif event_code == evtResolved:
             m = re.match("^[^\']+\'([^\']+)\'[^\']+\'([^\']+)\'", changes)
             if m is not None:
                 from_state = m.group(1)

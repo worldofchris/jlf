@@ -13,6 +13,9 @@ from bucket import bucket_labels
 from index import fill_date_index_blanks, week_start_date
 from history import arrivals, history_from_state_transitions
 
+import re
+import os
+
 
 class Metrics(object):
 
@@ -21,11 +24,17 @@ class Metrics(object):
         self.source = None
         self.work_items = None
         self.states = []
+        self.config = config
 
         if config['source']['type'] == 'fogbugz':
-            self.source = FogbugzWrapper(config)
+            self.source = FogbugzWrapper(self.config)
         elif config['source']['type'] == 'jira':
-            self.source = JiraWrapper(config)
+
+            m = re.match("^ENV\(([^\']+)\)", self.config['source']['authentication']['password'])
+            if m is not None:
+                self.config['source']['authentication']['password'] = os.environ.get(m.group(1), 'undefined')
+
+            self.source = JiraWrapper(self.config)
 
         if 'throughput_dow' in config:
             self.throughput_dow = config['throughput_dow']
