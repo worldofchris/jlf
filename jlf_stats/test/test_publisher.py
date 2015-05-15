@@ -469,6 +469,42 @@ class TestGetOutput(unittest.TestCase):
         actual_name = publisher.series_name("bigcorp-features")
         self.assertEqual(actual_name, expected_name)
 
+    def testAboutReport(self):
+
+        """
+        Add a bit of blurb to the report
+        """
+
+        report_config = {'name':     'reports',
+                         'reports':  [{'metric':     'cumulative-throughput',
+                                       'description': 'All about flow',
+                                       'categories': 'foreach',
+                                       'types':      'foreach'}],
+                         'format':   'xlsx',
+                         'counts_towards_throughput': [],
+                         'location': self.workspace,
+                         'types': {'failure': ['Bug', 'Fault'],
+                                   'value': ['New Feature', 'Story', 'Improvement'],
+                                   'oo': ['Task', 'Decision', 'User Support', 'Spike']}}
+
+        publisher.publish(report_config,
+                          self.mock_metrics,
+                          from_date=date(2012, 10, 8),
+                          to_date=date(2012, 11, 12))
+
+        expected_filename = 'reports.xlsx'
+        actual_output = os.path.join(self.workspace, expected_filename)
+
+        self.assertTrue(os.path.isfile(actual_output), "Spreadsheet not published:{spreadsheet}".format(spreadsheet=actual_output))
+
+        workbook = xlrd.open_workbook(actual_output)
+        expected_sheet_name = 'cumulative-throughput'
+        self.assertEqual(expected_sheet_name, workbook.sheet_names()[0])
+        worksheet = workbook.sheet_by_name(expected_sheet_name)
+        actual = worksheet.cell_value(rowx=0, colx=5)
+        expected = report_config['reports'][0]['description']
+        self.assertEqual(actual, expected)
+
 ################################################################################################################
 
     def compareExcelFiles(self, actual_output, expected_filename):

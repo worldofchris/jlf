@@ -115,6 +115,12 @@ def publish(config, jira, from_date, to_date):
 
                 data.to_excel(writer, worksheet_name)
 
+                if 'description' in report:
+
+                    workbook = writer.book
+                    sheets = [sheet for sheet in workbook.worksheets() if sheet.name == worksheet_name]
+                    sheets[0].write(0, len(data.columns) + 2, report['description'])
+
                 if 'graph' in report:
                     graph_type = 'column'
                     if 'type' in report['graph']:
