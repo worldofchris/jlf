@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+import pandas as pd
 
 
 class WorkItem(object):
@@ -11,6 +12,7 @@ class WorkItem(object):
                  type,
                  history,
                  date_created,
+                 state_transitions=None,
                  category=None,
                  cycles=None):
         self.id = id
@@ -21,6 +23,7 @@ class WorkItem(object):
         self.date_created = date_created
         self.category = category
         self.cycles = cycles
+        self.state_transitions = state_transitions
 
     def __str__(self):
         return unicode(self).encode('utf-8')
@@ -34,7 +37,7 @@ class WorkItem(object):
                   'title': self.title,
                   'state': self.state,
                   'type': self.type,
-                  'date_created': self.date_created.replace(tzinfo=None)} # HACK HACK HACK - for excel's benefit
+                  'date_created': self.date_created.replace(tzinfo=None)}  # HACK HACK HACK - for excel's benefit
 
         if self.cycles is not None:
             for cycle in self.cycles:
@@ -50,6 +53,9 @@ class WorkItem(object):
             if isinstance(obj, datetime):
                 serial = obj.isoformat()
                 return serial
+
+            elif isinstance(obj, pd.Series):
+                return obj.to_json()
 
             else:
                 return obj.__dict__

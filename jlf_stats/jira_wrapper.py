@@ -22,6 +22,7 @@ from index import week_start_date
 from history import time_in_states, cycle_time, history_from_jira_changelog
 from exceptions import MissingConfigItem
 from work import WorkItem
+import dateutil.parser
 
 
 class JiraWrapper(object):
@@ -201,11 +202,18 @@ class JiraWrapper(object):
 
                             pass
 
+                    state_transitions = []
+                    if issue.changelog is not None:
+                        for change in issue.changelog.histories:
+                            st = self.state_transition(change)
+                            state_transitions.append(st)
+
                     work_items.append(WorkItem(id=issue.key,
                                                title=issue.fields.summary,
                                                state=issue.fields.status.name,
                                                type=issue.fields.issuetype.name,
                                                history=issue_history,
+                                               state_transitions=state_transitions,
                                                date_created=date_created,
                                                cycles=cycles,
                                                category=category))
@@ -217,6 +225,21 @@ class JiraWrapper(object):
                 sys.stdout.flush()
 
         return work_items
+
+    def state_transition(self, history):
+
+        timestamp = dateutil.parser.parse(history.created)
+
+        for item in history.items:
+            if item.field == 'status':
+                from_state = item.fromString
+                to_state = item.toString
+
+                return {'from': from_state,
+                        'to': to_state,
+                        'timestamp': timestamp}
+
+        return None
 
     # This is on its way out
 

@@ -4,7 +4,7 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from datetime import date
+from datetime import date, datetime
 from jlf_stats.jira_wrapper import JiraWrapper
 from jlf_stats.index import fill_date_index_blanks, week_start_date
 from jlf_stats.bucket import bucket_labels
@@ -22,6 +22,9 @@ import copy
 import jira.client
 
 import os
+
+import tempfile
+from dateutil.tz import tzutc
 
 # Shell Mocks to deal with the indirection needed to get us down to the
 # things we actually want to mock
@@ -1236,3 +1239,24 @@ class TestGetMetrics(unittest.TestCase):
         actual_frame = our_jira.details(fields=['id', 'develop'])
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
+
+    def testDumpWorkItemsToFile(self):
+
+        workspace = tempfile.mkdtemp()
+
+        save_path = os.path.join(workspace, "local.json")
+
+        our_jira = Metrics(config=self.jira_config)
+        our_jira.save_work_items(save_path)
+
+    def testGetStateTransitionFromJiraHistory(self):
+
+        dummy_history = mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)])
+        expected = {'to': 'In Progress',
+                    'from': 'queued',
+                    'timestamp': datetime(2012, 1, 1, 9, 54, 29, 284000, tzinfo=tzutc())}
+
+        our_metrics = Metrics(config=self.jira_config)
+        actual = our_metrics.source.state_transition(dummy_history)
+
+        self.assertEqual(actual, expected)

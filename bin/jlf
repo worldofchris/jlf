@@ -46,6 +46,8 @@ def main():
 
     metrics = Metrics(config=config)
 
+    metrics.save_work_items()
+
     try:
         publisher.publish(config,
                           metrics,

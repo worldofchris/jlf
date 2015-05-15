@@ -1,13 +1,13 @@
 from work import WorkItem
 import re
 import dateutil.parser
-import datetime
 import fogbugz
 
 # Event codes from http://help.fogcreek.com/8202/xml-api#Event_Codes
 evtResolved = 14
 evtEdited = 2
 evtOpened = 1
+
 
 class FogbugzWrapper(object):
     """

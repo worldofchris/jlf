@@ -15,7 +15,7 @@ from history import arrivals, history_from_state_transitions
 
 import re
 import os
-
+import json
 
 class Metrics(object):
 
@@ -375,3 +375,23 @@ class Metrics(object):
         wf = df.resample('W-MON', how='sum')
 
         return wf
+
+    def save_work_items(self, filename=None):
+
+        if filename is None:
+            if 'name' in self.config['name']:
+                filename = self.config['name'] + '.json'
+            else:
+                filename = 'local.json'
+
+        if self.work_items is None:
+            self.work_items = self.source.work_items()
+
+        output = []
+
+        for item in self.work_items:
+            # This is so wrong.  We are decoding then encoding then decoding again...
+            output.append(json.loads(item.to_JSON()))
+
+        with open(filename, 'w') as outfile:
+            json.dump(output, outfile, indent=4, sort_keys=True)
