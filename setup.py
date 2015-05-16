@@ -24,6 +24,8 @@ setup(
     scripts=['bin/jlf'],
     setup_requires=['numpy'],
     install_requires=[
+        'nose',
+        'mock',
         'argparse==1.2.1',
         'ipython==0.13.2',
         'fogbugz',

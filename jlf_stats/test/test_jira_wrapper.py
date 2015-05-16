@@ -932,7 +932,7 @@ class TestGetMetrics(unittest.TestCase):
 
         expected_frame = pd.DataFrame(expected).set_index('bucket')
 
-        assert_frame_equal(actual_frame, expected_frame), actual_frame
+        assert_frame_equal(actual_frame, expected_frame, check_dtype=False), actual_frame
 
     def testCycleTimeHistogramsWithNones(self):
         """
@@ -979,7 +979,7 @@ class TestGetMetrics(unittest.TestCase):
 
         expected_frame = pd.DataFrame(expected).set_index('bucket')
 
-        assert_frame_equal(actual_frame, expected_frame), actual_frame
+        assert_frame_equal(actual_frame, expected_frame, check_dtype=False), actual_frame
 
     def testGetMultipleTypesCycleTime(self):
         """
@@ -1061,7 +1061,7 @@ class TestGetMetrics(unittest.TestCase):
 
         expected_frame = pd.DataFrame(expected).set_index('bucket')
 
-        assert_frame_equal(actual_frame, expected_frame), actual_frame
+        assert_frame_equal(actual_frame, expected_frame, check_dtype=False), actual_frame
 
     def testMakeHistogramBucketLabels(self):
         """
