@@ -1,13 +1,13 @@
-# JIRA _lean forward_ 
+# Just _lean_ forward
 
 [![Build Status](https://travis-ci.org/worldofchris/jlf.png)](https://travis-ci.org/worldofchris/jlf)
 
-## Extract _forward_ looking indicators from JIRA
+## Extract _forward_ looking indicators from JIRA and FogBugz
 
 
 ![image](public/assets/cfd.png)
 
-JLF pulls metrics out of JIRA so we can measure:
+JLF pulls metrics out of JIRA/FogBugz so we can measure:
 
 * Throughput
 * Cycle Time
@@ -117,13 +117,9 @@ If you want to report on any metrics which need to know about state order, ie. C
 
 ### Definition of Done
 
-In order to calculate throughput, JLF needs to know what constitutes a successfully completed piece of work.  By default this is:
+In order to calculate throughput, JLF needs to know what state or states a work item should be in to be considered done e.g.:
 
-     AND issuetype in standardIssueTypes() AND resolution in (Fixed) AND status in (Closed)
-     
-This will most likely not fit all workflows so you can configure it to match yours with:
-
-    "counts_towards_throughput": " AND issuetype in standardIssueTypes() AND status in (Closed)",
+    "counts_towards_throughput": ["Approved for Deployment", "Closed"],
 
 
 ### Metrics
