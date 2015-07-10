@@ -35,7 +35,7 @@ setup(
         'pandas==0.13.1',
         'python-dateutil==1.5',
         'pytz==2013b',
-        'six==1.3.0',
+        'six==1.9.0',
         'xlrd==0.9.2',
         'xlwt==0.7.5',
         'XlsxWriter'
