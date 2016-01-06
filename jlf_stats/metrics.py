@@ -3,6 +3,7 @@ Metrics
 """
 from jlf_stats.fogbugz_wrapper import FogbugzWrapper
 from jlf_stats.jira_wrapper import JiraWrapper
+from jlf_stats.local_wrapper import LocalWrapper
 
 import pandas as pd
 import numpy as np
@@ -16,6 +17,7 @@ from history import arrivals, history_from_state_transitions
 import re
 import os
 import json
+import math
 
 class Metrics(object):
 
@@ -35,6 +37,8 @@ class Metrics(object):
                 self.config['source']['authentication']['password'] = os.environ.get(m.group(1), 'undefined')
 
             self.source = JiraWrapper(self.config)
+        elif config['source']['type'] == 'local':
+            self.source = LocalWrapper(self.config)
 
         if 'throughput_dow' in config:
             self.throughput_dow = config['throughput_dow']
@@ -64,8 +68,11 @@ class Metrics(object):
         if self.work_items is None:
             self.work_items = self.source.work_items()
 
-        matches = [work_item for work_item in self.work_items if work_item.id == id]
-        return matches[0]
+        try:
+            matches = [work_item for work_item in self.work_items if work_item.id == id]
+            return matches[0]
+        except(IndexError):
+            return None
 
     def details(self, fields=None):
 
@@ -157,7 +164,9 @@ class Metrics(object):
 
             for day, state in work_item_history[work_item_key].iteritems():
                 if day.weekday() == self.throughput_dow:
-
+                    print state
+                    if not isinstance(state, basestring):
+                        state = 'unknown' # Need to figure out why we're getting NaNs here.
                     if state in self.counts_towards_throughput:
 
                         work_item_row = {'swimlane': swimlane,

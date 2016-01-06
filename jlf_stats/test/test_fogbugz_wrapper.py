@@ -45,7 +45,7 @@ class TestGetMetrics(unittest.TestCase):
     def testGetStateTransitionFromFogBugz(self):
 
         """
-        It looks like state transistions need to be pulled out of the schanges element.
+        It looks like state transitions need to be pulled out of the schanges element.
 
 
         "Edited Area changed from '{FROM_STATE}' to '{TO_STATE}'"

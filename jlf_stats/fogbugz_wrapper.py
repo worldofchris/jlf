@@ -2,7 +2,7 @@ from work import WorkItem
 import re
 import dateutil.parser
 import fogbugz
-
+import pickle
 # Event codes from http://help.fogcreek.com/8202/xml-api#Event_Codes
 evtResolved = 14
 evtEdited = 2
@@ -18,6 +18,8 @@ class FogbugzWrapper(object):
 
         self.fb = None
         self.categories = None
+        self.responses = []
+        self._work_items = []
 
         if config:
             self.fb = fogbugz.FogBugz(config['source']['url'], config['source']['token'])
@@ -28,18 +30,25 @@ class FogbugzWrapper(object):
         self.responses = []
         for cat in self.categories:
             query = self.categories[cat]
-            self.responses.append(self.fb.search(q=query, cols="ixBug,dtOpened,dtClosed,sTitle,sStatus,sCategory,minievents"))
+            self.responses.append(self.fb.search(q=query,
+                                                 cols="ixBug,dtOpened,dtClosed,sTitle,sStatus,sCategory,minievents"))
 
-        self.work_items = []
+        self._work_items = []
+
 
         for response in self.responses:
-            for case in response.cases.findAll('case'):
-                work_item = self.work_item_from_xml(case)
-                self.work_items.append(work_item)
 
-        return self.work_items
+            if response.cases is not None:
+                for case in response.cases.findAll('case'):
+                    work_item = self.work_item_from_xml(case)
+                    self._work_items.append(work_item)
+
+        return self._work_items
 
     def work_item_from_xml(self, case):
+        """
+        Extract a work_item from the xml returned by the FogBugz API
+        """
 
         state_history = []
         date_created = dateutil.parser.parse(case.dtopened.text)
@@ -72,6 +81,9 @@ class FogbugzWrapper(object):
                          changes,
                          timestamp,
                          event_code):
+        """
+        Create a state_transition from FogBugz event details
+        """
 
         if event_code == evtOpened:
             from_state = 'New'  # ???

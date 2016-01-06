@@ -258,16 +258,6 @@ class TestGetMetrics(unittest.TestCase):
     def tearDown(self):
         self.patcher.stop()
 
-    def testGetIssueByKey(self):
-        """
-        Issues can be queried by key
-        """
-
-        our_jira = Metrics(config=self.jira_config)
-        work_item = our_jira.work_item('OPSTOOLS-1')
-
-        self.assertEqual(work_item.category, "Ops Tools")
-
     def testGetCumulativeThroughputTable(self):
         """
         The Cumulative Throughput Table is what we use to create the graph in

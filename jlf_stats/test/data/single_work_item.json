@@ -1,0 +1,19 @@
+[
+    {
+        "category": "Ops Tools", 
+        "cycles": null, 
+        "date_created": "2015-05-22T19:35:55+00:00", 
+        "history": [
+            {
+                "from": "New", 
+                "timestamp": "2015-05-22T19:35:55+00:00", 
+                "to": "Open"
+            }
+        ], 
+        "id": "OPSTOOLS-1", 
+        "state": "New", 
+        "state_transitions": null, 
+        "title": "Migration fails with SQLite3::SQLException: no such table: receiveds: DROP TABLE \"receiveds\"/var/www/honeycomb/releases/20150522", 
+        "type": "Inquiry"
+    }
+]
