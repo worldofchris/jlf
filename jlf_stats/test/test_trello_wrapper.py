@@ -7,8 +7,8 @@ import unittest
 from datetime import datetime
 from dateutil.tz import tzutc
 
+import trello
 import mock
-import trolly
 
 from jlf_stats.trello_wrapper import TrelloWrapper
 from jlf_stats.work import WorkItem
@@ -21,43 +21,46 @@ class TestGetMetrics(unittest.TestCase):
         self.key = 'my_key'
         self.token = 'my_token'
 
-        self.patcher = mock.patch('trolly.client')
-        self.mock_trolly = self.patcher.start()
+        self.patcher = mock.patch('jlf_stats.trello_wrapper.TrelloApi')
+        self.mock_trello = self.patcher.start()
 
-        mock_client = mock.Mock(spec=trolly.client.Client)
-        self.mock_trolly.Client.return_value = mock_client
+        mock_cards = mock.Mock(spec=trello.cards)
+        mock_cards.get_list = mock.Mock()
+
+        mock_api = mock.Mock(spec=trello.TrelloApi)
+        mock_api.cards = mock_cards
+
+        self.mock_trello.TrelloApi.return_value = mock_api
 
     def testGetWorkItemFromTrelloCard(self):
 
-        our_trello = TrelloWrapper()
+        config = {'source': {'member': 'worldofchris',
+                             'key': 'my_key',
+                             'token': 'my_token'},
+                  'types':  {'value': ['Data Request', 'Improve Feature'],
+                             'failure': ['Defect'],
+                             'overhead': ['Task', 'Infrastructure', 'Operational Overhead']}}
 
-        client = trolly.client.Client(self.key, self.token)
-        card_id = '55a113FFFFFa5c9b5150e79'
-        card_name = 'Paint Castle'
-        card_kwargs = {'data': {u'labels': [{u'color': u'purple',
-                                             u'uses': 68, u'id': u'55a524e019ad3a5dc2cd00d3',
-                                             u'idBoard': u'55a524e0efbb13f4109fb5ed', u'name': u'Operational Overhead'}],
-                                u'idList': u'55b8807b43e41cda58ee361b',
-                                u'name': u'Sending SD Material to HD Destinations - SKY UPDATE'}}
+        our_trello = TrelloWrapper(config)
 
-        expected = WorkItem(id="1838",
-                            state="Closed (Fixed)",
+        expected = WorkItem(id=237,
+                            state="Closed",
                             title="Engine not working, throwing up this for no reason",
-                            type="Bug",
-                            category="wat",
-                            date_created=datetime(2015, 03, 04, 12, 15, 41, tzinfo=tzutc()),
+                            type="Operational Overhead",
+                            category="Awesome Software",
+                            date_created=datetime(2015, 11, 11, 18, 9, 0),
                             history=None)
 
-        card = trolly.card.Card(client,
-                                card_id,
-                                card_name,
-                                **card_kwargs)
+        card = {u'labels': [{u'name': u'Operational Overhead'}],
+                u'id': u'5643843c0c7f274e44f18961',
+                u'idBoard': u'55a524e0efbb13f4109fb5ed',
+                u'idShort': 237,
+                u'name': u'Engine not working, throwing up this for no reason'}
 
+        our_trello.trello.cards.get_list.return_value = {'name': "Closed"}
         actual = our_trello.work_item_from_card(card)
 
-        self.assertEqual(actual.to_JSON(), expected.to_JSON())
-
-        # trolly.client.Client
+        self.assertEqual(actual.to_JSON(), expected.to_JSON(), msg="{0}\n{1}".format(actual.to_JSON(), expected.to_JSON()))
 
 
     # def testGetStateTransitionFromTrelloUpdateAction(self):
