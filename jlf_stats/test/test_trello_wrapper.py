@@ -39,7 +39,9 @@ class TestGetMetrics(unittest.TestCase):
                              'token': 'my_token'},
                   'types':  {'value': ['Data Request', 'Improve Feature'],
                              'failure': ['Defect'],
-                             'overhead': ['Task', 'Infrastructure', 'Operational Overhead']}}
+                             'overhead': ['Task',
+                                          'Infrastructure',
+                                          'Operational Overhead']}}
 
         our_trello = TrelloWrapper(config)
 
@@ -60,8 +62,26 @@ class TestGetMetrics(unittest.TestCase):
         our_trello.trello.cards.get_list.return_value = {'name': "Closed"}
         actual = our_trello.work_item_from_card(card)
 
-        self.assertEqual(actual.to_JSON(), expected.to_JSON(), msg="{0}\n{1}".format(actual.to_JSON(), expected.to_JSON()))
+        self.assertEqual(actual.to_JSON(),
+                         expected.to_JSON(),
+                         msg="{0}\n{1}".format(actual.to_JSON(),
+                                               expected.to_JSON()))
 
 
-    # def testGetStateTransitionFromTrelloUpdateAction(self):
-    #     pass
+    def testGetStateTransitionFromTrelloUpdateAction(self):
+
+        update_action = {u'type': u'updateCard',
+                         u'date': u'2016-01-28T15:26:37.204Z',
+                         u'data': {u'listBefore': {u'name': u'Open',
+                                                   u'id': u'56937b57bed0c1a3c6360ac4'},
+                                   u'old': {u'idList': u'56937b57bed0c1a3c6360ac4'}, 
+                                   u'listAfter': {u'name': u'Closed',
+                                                  u'id': u'55b8a37e6cbc1c471cf77b13'}}}
+
+        expected = {'from': u'Open',
+                    'to':   u'Closed',
+                    'timestamp':  datetime(2016, 01, 28, 15, 26, 37, 204000, tzinfo=tzutc())}
+
+        actual = TrelloWrapper.state_transition(update_action)
+
+        self.assertEqual(actual, expected)

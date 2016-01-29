@@ -5,6 +5,7 @@ common format for reporting on.
 
 from datetime import datetime
 from trello import TrelloApi
+import dateutil.parser
 
 from jlf_stats.work import WorkItem
 
@@ -47,3 +48,14 @@ class TrelloWrapper(object):
                              history=None)
 
         return work_item
+
+    @classmethod
+    def state_transition(cls, update_action):
+        """
+        Get a state transition from an update action
+        """
+        state_transition = {'from': update_action['data']['listBefore']['name'],
+                            'to':   update_action['data']['listAfter']['name'],
+                            'timestamp':  dateutil.parser.parse(update_action['date'])}
+
+        return state_transition
