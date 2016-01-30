@@ -39,13 +39,20 @@ class TrelloWrapper(object):
 
         date_created = datetime.fromtimestamp(int(card['id'][0:8], 16))
 
+        actions = self.trello.cards.get_action(card['id'])
+        history = []
+        if actions is not None:
+            for action in actions:
+                if action['type'] == u'updateCard':
+                    history.append(TrelloWrapper.state_transition(action))
+
         work_item = WorkItem(id=card['idShort'],
                              state=current_list_name,
                              title=card['name'],
                              type=work_item_type,
                              category="Awesome Software",
                              date_created=date_created,
-                             history=None)
+                             history=history)
 
         return work_item
 
