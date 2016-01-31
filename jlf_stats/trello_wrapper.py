@@ -6,6 +6,7 @@ common format for reporting on.
 from datetime import datetime
 from trello import TrelloApi
 import dateutil.parser
+import operator
 
 from jlf_stats.work import WorkItem
 
@@ -20,7 +21,30 @@ class TrelloWrapper(object):
         self.trello = TrelloApi(config['source']['key'],
                                 token=config['source']['token'])
 
+        self.member = config['source']['member']
         self.types = config['types']
+        if 'categories' in config:
+            self.categories = config['categories']
+        self._work_items = []
+
+    def work_items(self):
+        """
+        Get work items from the Trello boards that make up the category
+        """
+        cards = []
+        boards = self.trello.members.get_board(self.member)
+        for category in self.categories:
+            for board_name in self.categories[category]:
+                print board_name
+                board = next((board for board in boards if board['name'] == board_name), None)
+                board_cards = self.trello.boards.get_card(board['id'])
+                cards.extend(board_cards)
+
+        for card in cards:
+            work_item = self.work_item_from_card(card)
+            self._work_items.append(work_item)
+
+        return self._work_items
 
     def work_item_from_card(self, card):
         """
@@ -45,6 +69,8 @@ class TrelloWrapper(object):
             for action in actions:
                 if action['type'] == u'updateCard':
                     history.append(TrelloWrapper.state_transition(action))
+
+        history.sort(key=operator.itemgetter('timestamp'))
 
         work_item = WorkItem(id=card['idShort'],
                              state=current_list_name,
