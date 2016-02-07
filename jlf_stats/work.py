@@ -29,7 +29,7 @@ class WorkItem(object):
         return unicode(self).encode('utf-8')
 
     def __unicode__(self):
-        return "{0}:{1}:{2}:{3}".format(self.id, self.state, self.history)
+        return "{0}:{1}:{2}".format(self.id, self.state, self.history)
 
     def detail(self):
 
@@ -55,10 +55,15 @@ class WorkItem(object):
                 return serial
 
             elif isinstance(obj, pd.Series):
-                return obj.to_json()
-
+                d1 = obj.to_dict()
+                d2 = {}
+                for k, v in d1.items():
+                    d2[k.strftime("%Y-%m-%d")] = v
+                return d2
             else:
                 return obj.__dict__
 
-        return json.dumps(self, default=json_serial,
-                          sort_keys=True, indent=4)
+        output = json.dumps(self, default=json_serial,
+                                  sort_keys=True, indent=4)
+
+        return output

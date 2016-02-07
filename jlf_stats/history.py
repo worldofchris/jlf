@@ -188,6 +188,7 @@ def history_from_jira_changelog(changelog, created_date, until_date=None):
     try:
         history = pd.Series(issue_day_history, index=dates)
     except AssertionError as e:
+        # TODO: turn this into a proper domain specific error and re-throw
         print e
         print dates
         print issue_day_history
@@ -225,10 +226,11 @@ def history_from_state_transitions(start_date, state_transitions, end_date):
 
     history = []
 
-    to_state = None
+    to_state = None # This needs to be the default state
 
     last_date = start_date
     for state in state_transitions:
+
         date = state['timestamp'].date()
 
         num_days = (date - last_date).days
@@ -243,6 +245,28 @@ def history_from_state_transitions(start_date, state_transitions, end_date):
     for n in range(0, num_days + 1):
         history.append(to_state)
 
-    dates = [start_date + timedelta(days=x) for x in range(0, (end_date - start_date).days + 1)]
+    try:
+        dates = [start_date + timedelta(days=x) for x in range(0, (end_date - start_date).days + 1)]
+        history_df = pd.Series(history, index=dates)
+    except  Exception as inst:
+        print inst
+        raise
 
-    return pd.Series(history, index=dates)
+    return history_df
+
+def remove_gaps_from_state_transitions(state_transitions):
+    """
+    If a state transition has None as it's from replace that with the to of the previous state transition
+    """
+
+    new_state_transisions = []
+
+    for index, transition in enumerate(state_transitions):
+
+        new_transition = transition.copy()
+        if new_transition['from'] is None:
+            new_transition['from'] = state_transitions[index-1]['to']
+
+        new_state_transisions.append(new_transition)
+
+    return new_state_transisions

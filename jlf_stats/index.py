@@ -18,15 +18,22 @@ def fill_date_index_blanks(index):
 
     index_list = index.tolist()
 
-    start_date = datetime.strptime(index_list[0][:10], '%Y-%m-%d')
-
-    end_date = datetime.strptime(index_list[-1][:10], '%Y-%m-%d')
+    if isinstance(index_list[0], basestring):
+        start_date = datetime.strptime(index_list[0][:10], '%Y-%m-%d')
+        end_date = datetime.strptime(index_list[-1][:10], '%Y-%m-%d')
+    else:
+        start_date = index_list[0]
+        end_date = index_list[-1]
 
     num_weeks = rrule.rrule(rrule.WEEKLY,
                             dtstart=start_date,
                             until=end_date).count()
 
     new_index = [week_start_date((start_date + timedelta(weeks=i)).isocalendar()[0],
-                                 (start_date + timedelta(weeks=i)).isocalendar()[1]).strftime('%Y-%m-%d') for i in range(0, num_weeks)]
+                                 (start_date + timedelta(weeks=i)).isocalendar()[1]) for i in range(0, num_weeks)]
+
+    if isinstance(start_date, basestring):
+        for item in new_index:
+            item = item.strftime('%Y-%m-%d')
 
     return new_index

@@ -3,6 +3,7 @@ Metrics
 """
 from jlf_stats.fogbugz_wrapper import FogbugzWrapper
 from jlf_stats.jira_wrapper import JiraWrapper
+from jlf_stats.trello_wrapper import TrelloWrapper
 from jlf_stats.local_wrapper import LocalWrapper
 
 import pandas as pd
@@ -18,6 +19,7 @@ import re
 import os
 import json
 import math
+from datetime import datetime, timedelta
 
 class Metrics(object):
 
@@ -37,6 +39,9 @@ class Metrics(object):
                 self.config['source']['authentication']['password'] = os.environ.get(m.group(1), 'undefined')
 
             self.source = JiraWrapper(self.config)
+        elif config['source']['type'] == 'trello':
+            self.source = TrelloWrapper(self.config)
+
         elif config['source']['type'] == 'local':
             self.source = LocalWrapper(self.config)
 
@@ -109,7 +114,7 @@ class Metrics(object):
                     history[work_item.id] = history_from_state_transitions(work_item.date_created.date(), work_item.history, until_date)
             else:
                 for type_grouping in types:
-                    if work_item.type in self.types[type_grouping]: 
+                    if work_item.type in self.types[type_grouping]:
                         if isinstance(self.source, JiraWrapper):
                             history[work_item.id] = work_item.history
                         else:
@@ -125,28 +130,20 @@ class Metrics(object):
                    from_date,
                    to_date,
                    cumulative=True,
-                   category=None,
                    types=None):
         """
-        Return throughput for all work_items in a state where they are considered
-        to count towards throughput.
-
-        Might want to add some additional conditions other than state but state
-        allows us the most options as to where to place the 'finishing line'
+        Return throughput for all work_items in a state where they
+        count towards throughput.
         """
 
-        work_item_history = self.history(from_date, to_date)
+        throughput_by_week = []
 
-        work_item_rows = []
+        if self.work_items is None:
+            self.work_items = self.source.work_items()
 
-        for work_item_key in work_item_history:
+        for work_item in self.work_items:
 
-            work_item = self.work_item(work_item_key)
-
-            if category is not None:
-
-                if category != work_item.category:
-                    continue
+            # TODO: Reinstate Category
 
             swimlane = work_item.category
 
@@ -159,45 +156,46 @@ class Metrics(object):
                     else:
                         continue
                         # print "Not counting " + f.work_itemtype.name
+
                 if swimlane == work_item.category:
+                    # Item was not in one of the types we are measuring
+                    # TODO: Might want to count this as 'other' instead
                     continue
 
-            for day, state in work_item_history[work_item_key].iteritems():
-                if day.weekday() == self.throughput_dow:
-                    print state
-                    if not isinstance(state, basestring):
-                        state = 'unknown' # Need to figure out why we're getting NaNs here.
-                    if state in self.counts_towards_throughput:
+            # Work backwards through the item history...
+            for transition in reversed(work_item.history):
+                state = transition['from']
+                if not isinstance(state, basestring):
+                    state = 'unknown' # Need to figure out why we're getting NaNs from JIRA here.
 
-                        work_item_row = {'swimlane': swimlane,
-                                         'id':       work_item_key,
-                                         'week':     day,
-                                         'count':    1}
-                        work_item_rows.append(work_item_row)
+                # ...and find the last transition from a state that doesn't count towards throughput
+                if state not in self.counts_towards_throughput:
 
-        df = pd.DataFrame(work_item_rows)
+                    # Figure out which week we're in
+                    transition_date = transition['timestamp'].date()
+
+                    work_item_row = {'swimlane': swimlane,
+                                     'id':       work_item.id,
+                                     'week':     transition_date - timedelta(days=transition_date.weekday()),
+                                     'count':    1}
+                    throughput_by_week.append(work_item_row)
+                    break
+
+        df = pd.DataFrame(throughput_by_week)
 
         if len(df.index) > 0:
 
             table = pd.tools.pivot.pivot_table(df, rows=['week'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
 
-            if cumulative:
-                return table
+        if not cumulative:
 
-            else:
-
-                def de_cumulative(x):
-                    for i in range(x.size-1, 0, -1):
-                        x[i] = x[i] - x[i-1]
-                    return x
-
-                table = table.apply(de_cumulative)
-
-                return table
+            return table
 
         else:
 
-            return None
+            reindexed = table.reindex(index=fill_date_index_blanks(table.index), fill_value=np.int64(0))
+            reindexed.index.name = "week"
+            return reindexed.cumsum()
 
     def cfd(self, from_date=None, until_date=None, types=None):
         """
@@ -270,6 +268,8 @@ class Metrics(object):
                     else:
                         cycle_time_data[key].append(work_item.cycles[cycle])
             except KeyError:
+                continue
+            except TypeError:
                 continue
 
         histogram = None
@@ -377,6 +377,7 @@ class Metrics(object):
             try:
                 arrivals_count = arrivals(work_item.history, arrivals_count)
             except AttributeError as e:
+                # TODO: Rethrow as domain specific error
                 print e
 
         df = pd.DataFrame.from_dict(arrivals_count, orient='index')
@@ -388,7 +389,7 @@ class Metrics(object):
     def save_work_items(self, filename=None):
 
         if filename is None:
-            if 'name' in self.config['name']:
+            if 'name' in self.config:
                 filename = self.config['name'] + '.json'
             else:
                 filename = 'local.json'
