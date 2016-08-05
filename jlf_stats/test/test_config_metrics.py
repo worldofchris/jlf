@@ -1,10 +1,12 @@
 from jlf_stats.fogbugz_wrapper import FogbugzWrapper
 from jlf_stats.jira_wrapper import JiraWrapper
+from jlf_stats.trello_wrapper import TrelloWrapper
 from jlf_stats.local_wrapper import LocalWrapper
 
 from jlf_stats.metrics import Metrics
 import unittest
 import os
+
 
 class TestMetrics(unittest.TestCase):
 
@@ -41,6 +43,22 @@ class TestMetrics(unittest.TestCase):
         our_metrics = Metrics(config)
         self.assertIsInstance(our_metrics.source, JiraWrapper)
 
+    def testConfigureWithTrello(self):
+
+        config = {
+            'source': {'type': 'trello',
+                       'member': 'worldofchris',
+                       'key': 'my_key',
+                       'token': 'my_token'},
+            'categories': None,
+            'cycles': None,
+            'types': None,
+            'counts_towards_throughput': None
+        }
+
+        our_metrics = Metrics(config)
+        self.assertIsInstance(our_metrics.source, TrelloWrapper)
+
     def testConfigureWithLocal(self):
 
         config = {
@@ -53,7 +71,7 @@ class TestMetrics(unittest.TestCase):
         }
 
         our_metrics = Metrics(config)
-        self.assertIsInstance(our_metrics.source, LocalWrapper)        
+        self.assertIsInstance(our_metrics.source, LocalWrapper)      
 
     def testGetPasswordFromEnvVar(self):
         """

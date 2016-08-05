@@ -1,8 +1,13 @@
+"""
+Wrapper around the FogBugz API to get data out and into a
+common format for reporting on.
+"""
+
 from work import WorkItem
 import re
 import dateutil.parser
 import fogbugz
-import pickle
+
 # Event codes from http://help.fogcreek.com/8202/xml-api#Event_Codes
 evtResolved = 14
 evtEdited = 2
@@ -22,8 +27,10 @@ class FogbugzWrapper(object):
         self._work_items = []
 
         if config:
-            self.fb = fogbugz.FogBugz(config['source']['url'], config['source']['token'])
+            self.fb = fogbugz.FogBugz(config['source']['url'],
+                                      config['source']['token'])
             self.categories = config['categories']
+
 
     def work_items(self):
 

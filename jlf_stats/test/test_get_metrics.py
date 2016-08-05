@@ -89,3 +89,27 @@ class TestGetMetrics(unittest.TestCase):
                                           to_date=date(2012, 11, 13))
 
         assert_frame_equal(actual_frame.astype(np.int64), expected_frame), actual_frame
+
+
+    def testGetDemand(self):
+
+        config = {
+            'source': {'type': 'local',
+                       'file': data_file('data/dummy.json')},
+            'categories': {
+                'Portal':    'project = Portal',
+                'Reports': 'component = Report',
+                'Ops Tools': 'project = OPSTOOLS'
+            },
+            'cycles': None,
+            'types': None,
+            'counts_towards_throughput': END_STATE,
+            'until_date': '2012-11-13'
+        }
+
+        metrics = Metrics(config=config)
+        actual_frame = metrics.demand(from_date=date(2012, 01, 01),
+                                      to_date=date(2012, 12, 31),
+                                      types=["failure"])
+
+        print actual_frame

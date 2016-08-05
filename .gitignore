@@ -1,2 +1,9 @@
 *pyc
 .env
+config
+output
+dist
+build
+.eggs
+.jlf
+Just_lean_forward.egg-info

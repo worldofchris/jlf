@@ -64,6 +64,13 @@ class Metrics(object):
         except KeyError:
             pass
 
+        # Normalise Types so they match with Trello types
+        def normalise(item):
+            return item.strip().lower()
+
+        for type_grouping in self.types:
+            self.types[type_grouping] = map(normalise, self.types[type_grouping])
+
     def work_item(self, id):
         """
         Get an individual work item.
@@ -143,43 +150,43 @@ class Metrics(object):
 
         for work_item in self.work_items:
 
-            # TODO: Reinstate Category
+            if work_item.state in self.counts_towards_throughput:
+                # Need to add a test for work items that are not in a throughput state
 
-            swimlane = work_item.category
+                # TODO: Reinstate Category
 
-            # Are we grouping by work type?
+                swimlane = work_item.category
 
-            if types is not None:
-                for type_grouping in types:
-                    if work_item.type in self.types[type_grouping]:
-                        swimlane = swimlane + '-' + type_grouping
-                    else:
+                if types is not None:
+                    for type_grouping in types:
+                        for work_type in self.types[type_grouping]:
+			    if work_item.type is not None:
+                                if work_item.type.lower().strip() == work_type.lower().strip():
+                                    swimlane = swimlane + '-' + type_grouping
+
+                    if swimlane == work_item.category:
+                        # Item was not in one of the types we are measuring
                         continue
-                        # print "Not counting " + f.work_itemtype.name
 
-                if swimlane == work_item.category:
-                    # Item was not in one of the types we are measuring
-                    # TODO: Might want to count this as 'other' instead
-                    continue
 
-            # Work backwards through the item history...
-            for transition in reversed(work_item.history):
-                state = transition['from']
-                if not isinstance(state, basestring):
-                    state = 'unknown' # Need to figure out why we're getting NaNs from JIRA here.
+                # Work backwards through the item history...
+                for transition in reversed(work_item.history):
+                    state = transition['from']
+                    if not isinstance(state, basestring):
+                        state = 'unknown' # Need to figure out why we're getting NaNs from JIRA here.
 
-                # ...and find the last transition from a state that doesn't count towards throughput
-                if state not in self.counts_towards_throughput:
+                    # ...and find the last transition from a state that doesn't count towards throughput
+                    if state not in self.counts_towards_throughput:
 
-                    # Figure out which week we're in
-                    transition_date = transition['timestamp'].date()
+                        # Figure out which week we're in
+                        transition_date = transition['timestamp'].date()
 
-                    work_item_row = {'swimlane': swimlane,
-                                     'id':       work_item.id,
-                                     'week':     transition_date - timedelta(days=transition_date.weekday()),
-                                     'count':    1}
-                    throughput_by_week.append(work_item_row)
-                    break
+                        work_item_row = {'swimlane': swimlane,
+                                         'id':       work_item.id,
+                                         'week':     transition_date - timedelta(days=transition_date.weekday()),
+                                         'count':    1}
+                        throughput_by_week.append(work_item_row)
+                        break
 
         df = pd.DataFrame(throughput_by_week)
 
@@ -223,7 +230,7 @@ class Metrics(object):
                         if math.isnan(state):
                             return -1
 
-                    raise exceptions.MissingState(state, "Missing state:{0}".format(state))
+                    print "Missing state:{0}".format(state)
 
             days[day] = sorted(tickets, key=state_order)
 
@@ -333,7 +340,7 @@ class Metrics(object):
             #     week = None
 
             detail['week_created'] = week_start_date(detail['date_created'].isocalendar()[0],
-                                                     detail['date_created'].isocalendar()[1]).strftime('%Y-%m-%d')
+                                                     detail['date_created'].isocalendar()[1])
 
             include = True
 
@@ -342,9 +349,10 @@ class Metrics(object):
             if types is not None and self.types is not None:
                 include = False
                 for type_grouping in types:
-                    if work_item.type in self.types[type_grouping]:
-                        swimlane = swimlane + '-' + type_grouping
-                        include = True
+                    if work_item.type is not None:
+                        if work_item.type.strip().lower() in self.types[type_grouping]:
+                            swimlane = swimlane + '-' + type_grouping
+                            include = True
 
             detail['swimlane'] = swimlane
 
@@ -353,7 +361,7 @@ class Metrics(object):
 
         df = pd.DataFrame(details)
 
-        table = pd.tools.pivot.pivot_table(df, rows=['week_created'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
+        table = pd.tools.pivot.pivot_table(df, rows=['week_created'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero).fillna(0)
 
         reindexed = table.reindex(index=fill_date_index_blanks(table.index), fill_value=np.int64(0))
         reindexed.index.name = "week"

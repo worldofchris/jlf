@@ -1,13 +1,6 @@
 """
-Wrapper around the JIRA API to allow us to categorize issues by
-project/component/label etc and report on:
-
-- Work in Progress
-- Work completed - including Cycle Time
-- Work history
-- Cumulative Flow
-- Throughput
-- Rate at which types of work are created
+Wrapper around the JIRA API to get data out and into a
+common format for reporting on.
 
 Also abstracts away from batch searching and other implementation
 details we don't want to present to the user.
@@ -18,10 +11,10 @@ import sys
 
 from datetime import date, datetime
 
-from index import week_start_date
-from history import time_in_states, cycle_time, history_from_jira_changelog
-from exceptions import MissingConfigItem
-from work import WorkItem
+from jlf_stats.index import week_start_date
+from jlf_stats.history import time_in_states, cycle_time, history_from_jira_changelog
+from jlf_stats.exceptions import MissingConfigItem
+from jlf_stats.work import WorkItem
 import dateutil.parser
 
 

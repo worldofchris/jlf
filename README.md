@@ -28,8 +28,8 @@ It is intended to complement the existing [kanban reporting](https://confluence.
 * Clone this repo
 * Recommened but not essential: Create and activate a Python virtual environment e.g.
 
-        virtualenv jlf
-        source jlf/bin/activate
+        virtualenv .jlf
+        source .jlf/bin/activate
     
 * Install with setup.py
 
@@ -37,12 +37,15 @@ It is intended to complement the existing [kanban reporting](https://confluence.
     
 ## Configuration
 
+### Configuring a JIRA source
+
 To start getting metrics out of JIRA you'll need a JSON config file describing your JIRA instance, the filters for the issues you want to report on, different types of work, cycles and the metrics you want to extract.
 
-### Jira Instance
+#### Jira Instance
 
 JLF needs to know where to look for the issues to report on.  You need to provide a server URL, and authentication credentials.  These can either be basic authenticion using username and password:
 
+    "type": "jira",
     "server": "https://worldofchris.atlassian.net",
     "authentication": {
         "username": "readonly",
@@ -51,6 +54,7 @@ JLF needs to know where to look for the issues to report on.  You need to provid
     
  or OAuth:
 
+    "type": "jira",
     "server": "https://worldofchris.atlassian.net",
     "authentication": {
         "access_token": "In3d5YsFmqRTDJah2gg5sNH0WM2ekKzA",
@@ -60,7 +64,17 @@ JLF needs to know where to look for the issues to report on.  You need to provid
     }
  
 Configuring OAuth access to JIRA is described in more detail at the end of this README.     
-    
+ 
+### Configuring a FogBugz source
+
+#### FogBugz XML API Token
+
+To connect to FogBugz you need an API token which you can obtain [through the FogBugz UI](http://help.fogcreek.com/8447/how-to-get-a-fogbugz-xml-api-token)
+
+    "type": "fogbugz",
+    "url": "https://worldofchris.fogbugz.com",
+    "token": "33vvjghjeis7439a29qqg29azqq8q1"
+
 ### Categories
 
 You can get metrics one or a number of separate sets of issues.  Typically these might be all the issues associated with a particular project or with a specific release (FixVersion) of a project

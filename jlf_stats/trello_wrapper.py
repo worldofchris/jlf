@@ -11,7 +11,6 @@ import operator
 from jlf_stats.history import remove_gaps_from_state_transitions
 from jlf_stats.work import WorkItem
 
-
 class TrelloWrapper(object):
     """
     Wrapper around a the Trolly/Trello API
@@ -19,6 +18,7 @@ class TrelloWrapper(object):
 
     def __init__(self, config):
 
+        self.transition_actions = ['createCard', 'updateCard', 'moveCardToBoard', 'moveCardFromBoard']
         self.trello = TrelloApi(config['source']['key'],
                                 token=config['source']['token'])
 
@@ -30,8 +30,8 @@ class TrelloWrapper(object):
 
         self.boards = self.trello.members.get_board(self.member)
 
-        self.from_date = date(2015, 5, 1)
-        self.until_date = date(2016, 2, 1)
+        self.from_date = datetime.strptime(config['from_date'], '%Y-%m-%d')
+        self.until_date = datetime.strptime(config['until_date'], '%Y-%m-%d')
 
     def work_items(self):
         """
@@ -59,29 +59,27 @@ class TrelloWrapper(object):
         since = self.from_date
         before = since + timedelta(days=1)
         while before < self.until_date:
-            for filter in ['createCard', 'updateCard', 'moveCardToBoard', 'moveCardFromBoard']:
+            for filter in self.transition_actions:
                 batch = self.trello.boards.get_action(board['id'], limit=limit, filter=filter, since=str(since), before=str(before))
                 actions.extend(batch)
-                print len(actions)
 
             since = since + timedelta(days=1)
             before = before + timedelta(days=1)
 
         print board['name'] + ' has ' + str(len(actions)) + ' actions.'
         for action in actions:
-            if action['type'] in ['updateCard', 'moveCardToBoard', 'createCard']:
-                card_id = action['data']['card']['id']
+            card_id = action['data']['card']['id']
+            work_item = next((work_item for work_item in self._work_items if work_item.id == card_id), None)
 
-                work_item = next((work_item for work_item in self._work_items if work_item.id == card_id), None)
+            state_transition = self.state_transition(action)
 
-                state_transition = TrelloWrapper.state_transition(action)
+            if work_item is not None:
+                if state_transition is not None:
+                    work_item.history.append(state_transition)
+                    work_item.history.sort(key=operator.itemgetter('timestamp'))
 
-                if work_item is not None:
-                    if state_transition is not None:
-                        work_item.history.append(state_transition)
-                        work_item.history.sort(key=operator.itemgetter('timestamp'))
-
-                else:
+            else:
+                try:
                     card = self.trello.cards.get(card_id)
 
                     # Add the action
@@ -97,7 +95,7 @@ class TrelloWrapper(object):
                     for work_types in self.types:
                         for type_label in self.types[work_types]:
                             for label in card['labels']:
-                                if label['name'] == type_label:
+                                if label['name'].lower().strip() == type_label.lower().strip():
                                     work_item_type = label['name']
 
                     work_item = WorkItem(id=card['id'],
@@ -109,16 +107,16 @@ class TrelloWrapper(object):
                                          history=history)
 
                     self._work_items.append(work_item)
-
-                if action['type'] == 'createCard':
-                    # Update the Created Date from the Create Action
-                    date_created = state_transition['timestamp']
-                    work_item.date_created = date_created
+                except:
+                    pass
+            if action['type'] == 'createCard':
+                # Update the Created Date from the Create Action
+                date_created = state_transition['timestamp']
+                work_item.date_created = date_created
 
         return self._work_items
 
-    @classmethod
-    def state_transition(cls, action):
+    def state_transition(self, action):
         """
         Get a state transition from an action
         """
@@ -130,14 +128,17 @@ class TrelloWrapper(object):
                 return None
             from_state = action['data']['listBefore']['name']
         elif action['type'] == 'moveCardToBoard':
-            to_state = action['data']['list']['name']
+            list_details = self.trello.lists.get(action['data']['list']['id'])
+            to_state = list_details['name']
             from_state = None
         elif action['type'] == 'moveCardFromBoard':
             to_state = None
-            from_state = action['data']['list']['name']
+            list_details = self.trello.lists.get(action['data']['list']['id'])
+            from_state = list_details['name']
         elif action['type'] == 'createCard':
             from_state = 'CREATED'
-            to_state = action['data']['list']['name']
+            list_details = self.trello.lists.get(action['data']['list']['id'])
+            to_state = list_details['name']
         else:
             return None
 

@@ -22,14 +22,14 @@
             "Bug"
         ],
         "value": [
-            "New Feature"
+            "Feature"
         ],
         "operational overhead": [
-            "Task"
+            "Inquiry", "Scheduled Item"
         ]
     },
-    "counts_towards_throughput": ["Resolved"],
-    "states": ["Open", "In Progress", "Resolved", "Closed"],
+    "counts_towards_throughput": ["Resolved (Fixed)"],
+    "states": ["new", "In Progress", "Closed (Fixed)", "Resolved (Fixed)"],
     "name": "reports",
     "reports": [
         {

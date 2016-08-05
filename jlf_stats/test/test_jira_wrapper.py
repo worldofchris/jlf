@@ -122,7 +122,8 @@ class TestGetMetrics(unittest.TestCase):
         'types': types,
         'states': states,
         'counts_towards_throughput': [END_STATE],
-        'throughput_dow': 0
+        'throughput_dow': 0,
+        'name': 'dummy'
     }
 
     # There are the sets of issues to match the categories that get searched for in the tests
@@ -257,50 +258,6 @@ class TestGetMetrics(unittest.TestCase):
 
     def tearDown(self):
         self.patcher.stop()
-
-    def testGetCumulativeThroughputTable(self):
-        """
-        The Cumulative Throughput Table is what we use to create the graph in
-        Excel
-        """
-
-        expected = {'Ops Tools': pd.Series([np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(2),
-                                            np.int64(3)],
-                                           index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']),
-                    'Portal':    pd.Series([np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(2),
-                                            np.int64(3)],
-                                           index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']),
-                    'Reports':   pd.Series([np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(2),
-                                            np.int64(3)],
-                                           index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
-
-        expected_frame = pd.DataFrame(expected)
-
-        expected_frame.index.name = 'week'
-        expected_frame.columns.name = 'swimlane'
-
-        jira_config = copy.copy(self.jira_config)
-        jira_config['until_date'] = '2012-11-13'
-
-        our_jira = Metrics(config=jira_config)
-
-        actual_frame = our_jira.throughput(cumulative=True,
-                                           from_date=date(2012, 01, 01),
-                                           to_date=date(2012, 11, 13))
-
-        assert_frame_equal(actual_frame.astype(np.int64), expected_frame), actual_frame
 
     def testGetThroughputMultipleCategories(self):
         """

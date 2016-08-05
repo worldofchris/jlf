@@ -13,8 +13,8 @@ class build_ext(_build_ext):
 
 setup(
     name="Just lean forward",
-    version="0.1.2dev",
-    description="Get Lean Stats like throughput and cycle time out of Jira/FogBugz with ease",
+    version="0.1.3dev",
+    description="Get Lean Stats like throughput and cycle time out of Jira/FogBugz/Trello with ease",
     author="Chris Young",
     license="LICENSE.md",
     author_email="chris@chrisyoung.org",
@@ -24,6 +24,7 @@ setup(
     scripts=['bin/jlf'],
     setup_requires=['numpy'],
     install_requires=[
+        'requests',
         'nose',
         'mock',
         'argparse==1.2.1',
@@ -38,6 +39,7 @@ setup(
         'six==1.9.0',
         'xlrd==0.9.2',
         'xlwt==0.7.5',
-        'XlsxWriter'
+        'XlsxWriter',
+        'trello==0.9.1'
     ]
 )

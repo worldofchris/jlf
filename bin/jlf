@@ -41,6 +41,12 @@ def main():
     end_date = datetime.now()
     start_date = end_date - timedelta(weeks=args.num_weeks)
 
+    # This use of from/start and end/until isn't very helpful.
+    # TODO: Standardise on one.
+
+    if 'from_date' not in config:
+        config['from_date'] = datetime.strftime(start_date, '%Y-%m-%d')
+
     if 'until_date' not in config:
         config['until_date'] = datetime.strftime(end_date, '%Y-%m-%d')
 
@@ -52,7 +58,7 @@ def main():
         publisher.publish(config,
                           metrics,
                           from_date=start_date.date(),
-                          to_date=end_date.date())        
+                          to_date=end_date.date()) # Can get rid of these from publisher as they are in the metrics config    
     except MissingState as error:
         sys.exit(error.msg)
 

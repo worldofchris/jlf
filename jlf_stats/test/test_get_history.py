@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-from jlf_stats.history import cycle_time, time_in_states, arrivals, history_from_jira_changelog, history_from_state_transitions, remove_gaps_from_state_transitions
+from jlf_stats.history import cycle_time, time_in_states, arrivals, history_from_jira_changelog, history_from_state_transitions
 from jlf_stats.test.jira_mocks import mockHistory, mockItem, mockChangelog, CREATED_STATE, START_STATE, END_STATE, REOPENED_STATE
 
 import unittest
-from datetime import date, datetime
-from dateutil.tz import tzutc
-
+from datetime import date
 import dateutil.parser
 
 import pandas as pd
@@ -357,6 +355,9 @@ class TestIssueHistory(unittest.TestCase):
 
         self.assertEquals(actual, expected_twice)
 
+    def testGetHistoryWithNoStateTransitions(self):
+    	foo
+
     def testGetHistoryFromStateTransitions(self):
 
         state_transitions = [{'from': "Open",
@@ -410,19 +411,3 @@ class TestIssueHistory(unittest.TestCase):
                                                 dateutil.parser.parse("2015-03-12T10:02:06+00:00").date())
 
         assert_series_equal(actual, expected)
-
-    def testRemoveGapsFromStateTransitions(self):
-
-        history = [{'to': u'Doing',
-                    'from': 'CREATED', 'timestamp': datetime(2015, 8, 19, 23, 16, 11, 481000, tzinfo=tzutc())},
-                   {'to': u'Done before WE 2015-10-02',
-                    'from': None, 'timestamp': datetime(2015, 9, 30, 19, 17, 57, 186000, tzinfo=tzutc())}]
-
-        expected = [{'to': u'Doing',
-                     'from': 'CREATED', 'timestamp': datetime(2015, 8, 19, 23, 16, 11, 481000, tzinfo=tzutc())},
-                    {'to': u'Done before WE 2015-10-02',
-                     'from': 'Doing', 'timestamp': datetime(2015, 9, 30, 19, 17, 57, 186000, tzinfo=tzutc())}]
-
-        actual = remove_gaps_from_state_transitions(history)
-
-        self.assertEquals(expected, actual)

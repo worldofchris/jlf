@@ -1,5 +1,6 @@
 import json
 from dateutil import parser
+
 from work import WorkItem
 
 class LocalWrapper(object):
@@ -17,17 +18,22 @@ class LocalWrapper(object):
 
         if self.work_item_data is None:
 
-            with open(self.source['file']) as local_file:    
+            with open(self.source['file']) as local_file:
                 work_item_raw_data = json.load(local_file)
 
             self.work_item_data = []
 
             for item in work_item_raw_data:
+
+                if item['state_transitions'] is not None:
+                    for transition in item['state_transitions']:
+                        transition['timestamp'] = parser.parse(transition['timestamp'])
+
                 wi = WorkItem(id=item['id'],
                               title=item['title'],
                               state=item['state'],
                               type=item['type'],
-                              history=item['history'],
+                              history=item['state_transitions'],
                               date_created=parser.parse(item['date_created']),
                               category=item['category'])
 
