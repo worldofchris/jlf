@@ -1,6 +1,7 @@
 from setuptools import setup
 from setuptools.command.build_ext import build_ext as _build_ext
-
+import inspect
+from subprocess import call
 
 class build_ext(_build_ext):
     # Taken from http://stackoverflow.com/a/21621689/1064619
@@ -23,6 +24,7 @@ setup(
     include_package_data=True,
     scripts=['bin/jlf'],
     setup_requires=['numpy'],
+    zip_safe=False,
     install_requires=[
         'requests',
         'nose',
@@ -43,3 +45,8 @@ setup(
         'trello==0.9.1'
     ]
 )
+
+import trello.boards
+boards_source = inspect.getsourcefile(trello.boards)
+
+call(['patch', boards_source, 'boards.py.diff'])

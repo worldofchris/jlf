@@ -31,7 +31,11 @@ It is intended to complement the existing [kanban reporting](https://confluence.
         virtualenv .jlf
         source .jlf/bin/activate
     
-* Install with setup.py
+* Install with pip so we get an unpacked trello lib we can patch:
+
+        pip install -r requirements.txt
+
+* Then install with setup.py:
 
         python setup.py install
     
