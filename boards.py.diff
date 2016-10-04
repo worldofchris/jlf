@@ -1,0 +1,13 @@
+--- .env/lib/python2.7/site-packages/trello/boards.py	2016-08-05 14:16:32.000000000 +0100
++++ /Users/chris/src/woc/jlf/.jlf/lib/python2.7/site-packages/trello/boards.py	2016-07-06 13:02:05.000000000 +0100
+@@ -18,8 +18,8 @@
+         resp.raise_for_status()
+         return json.loads(resp.content)
+ 
+-    def get_action(self, board_id, filter=None, fields=None, limit=None, page=None, idModels=None):
+-        resp = requests.get("https://trello.com/1/boards/%s/actions" % (board_id), params=dict(key=self._apikey, token=self._token, filter=filter, fields=fields, limit=limit, page=page, idModels=idModels), data=None)
++    def get_action(self, board_id, filter=None, fields=None, limit=None, page=None, idModels=None, since=None, before=None):
++        resp = requests.get("https://trello.com/1/boards/%s/actions" % (board_id), params=dict(key=self._apikey, token=self._token, filter=filter, fields=fields, limit=limit, page=page, idModels=idModels, since=since, before=before), data=None)
+         resp.raise_for_status()
+         return json.loads(resp.content)
+ 
