@@ -202,7 +202,7 @@ class Metrics(object):
 
             reindexed = table.reindex(index=fill_date_index_blanks(table.index), fill_value=np.int64(0))
             reindexed.index.name = "week"
-            return reindexed.cumsum()
+            return reindexed.fillna(0).cumsum()
 
     def cfd(self, from_date=None, until_date=None, types=None):
         """
