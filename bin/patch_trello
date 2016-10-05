@@ -6,4 +6,4 @@ from subprocess import call
 
 boards_source = inspect.getsourcefile(trello.boards)
 
-call(['patch', boards_source, 'boards.py.diff'])
+call(['patch', boards_source, 'patches/boards.py.diff'])
