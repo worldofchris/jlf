@@ -25,7 +25,7 @@ setup(
     scripts=['bin/jlf', 'bin/patch_trello'],
     setup_requires=['numpy'],
     zip_safe=False,
-    data_files=['patches', ['boards.py.diff']],
+    data_files=[('patches', ['boards.py.diff'])],
     install_requires=[
         'requests',
         'nose',
