@@ -22,7 +22,7 @@ setup(
     platforms=["Any"],
     packages=['jlf_stats'],
     include_package_data=True,
-    scripts=['bin/jlf'],
+    scripts=['bin/jlf', 'bin/patch_trello'],
     setup_requires=['numpy'],
     zip_safe=False,
     install_requires=[
@@ -46,7 +46,3 @@ setup(
     ]
 )
 
-import trello.boards
-boards_source = inspect.getsourcefile(trello.boards)
-
-call(['patch', boards_source, 'boards.py.diff'])

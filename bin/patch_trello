@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+
+import trello.boards
+boards_source = inspect.getsourcefile(trello.boards)
+
+call(['patch', boards_source, 'boards.py.diff'])
