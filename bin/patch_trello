@@ -2,8 +2,9 @@
 
 import trello.boards
 import inspect
+import os
 from subprocess import call
 
 boards_source = inspect.getsourcefile(trello.boards)
 
-call(['patch', boards_source, 'patches/boards.py.diff'])
+call(['patch', boards_source, os.path.join(os.path.dirname(__file__), 'boards.py.diff')])
