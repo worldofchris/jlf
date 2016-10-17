@@ -191,18 +191,13 @@ class Metrics(object):
         df = pd.DataFrame(throughput_by_week)
 
         if len(df.index) > 0:
-
             table = pd.tools.pivot.pivot_table(df, rows=['week'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
-
-        if not cumulative:
-
-            return table
-
-        else:
-
-            reindexed = table.reindex(index=fill_date_index_blanks(table.index), fill_value=np.int64(0))
-            reindexed.index.name = "week"
-            return reindexed.fillna(0).cumsum()
+            if not cumulative:
+                return table
+            else:
+                reindexed = table.reindex(index=fill_date_index_blanks(table.index), fill_value=np.int64(0))
+                reindexed.index.name = "week"
+                return reindexed.fillna(0).cumsum()
 
     def cfd(self, from_date=None, until_date=None, types=None):
         """
