@@ -1,7 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+Get metrics from a JSON format file in the local filesystem.
+"""
+
 import json
 from dateutil import parser
+from jlf_stats.exceptions import MissingConfigItem
+from jlf_stats.work import WorkItem
 
-from work import WorkItem
 
 class LocalWrapper(object):
 
@@ -9,8 +15,9 @@ class LocalWrapper(object):
 
         try:
             self.source = config['source']
-        except KeyError as e:
-            raise MissingConfigItem(e, "Missing Config Item:{0}".format(e))
+        except KeyError as exception:
+            raise MissingConfigItem(exception,
+                                    "Missing Config Item:{0}".format(exception))
 
         self.work_item_data = None
 
