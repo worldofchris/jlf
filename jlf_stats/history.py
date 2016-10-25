@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta
 import pandas as pd
 
 """States between which we consider an issue to be being worked on
-   for the purposes of calculating cycletime"""
+   for the purposes of calculating cycle time"""
 
 CREATED_STATE = 'Open'
 START_STATE = 'In Progress'
@@ -247,6 +247,7 @@ def history_from_state_transitions(start_date, state_transitions, end_date):
 
     try:
         dates = [start_date + timedelta(days=x) for x in range(0, (end_date - start_date).days + 1)]
+
         history_df = pd.Series(history, index=dates)
     except  Exception as inst:
         print inst

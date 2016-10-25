@@ -12,7 +12,7 @@ from mock import patch, Mock
 import copy
 
 from jlf_stats.trello_wrapper import TrelloWrapper
-from jlf_stats.work import WorkItem
+from jlf_stats.work_item import WorkItem
 
 
 class TestGetMetrics(unittest.TestCase):

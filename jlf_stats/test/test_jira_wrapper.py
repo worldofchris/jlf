@@ -1187,15 +1187,6 @@ class TestGetMetrics(unittest.TestCase):
 
         assert_frame_equal(actual_frame, expected_frame), actual_frame
 
-    def testDumpWorkItemsToFile(self):
-
-        workspace = tempfile.mkdtemp()
-
-        save_path = os.path.join(workspace, "local.json")
-
-        our_jira = Metrics(config=self.jira_config)
-        our_jira.save_work_items(save_path)
-
     def testGetStateTransitionFromJiraHistory(self):
 
         dummy_history = mockHistory(u'2012-01-01T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)])

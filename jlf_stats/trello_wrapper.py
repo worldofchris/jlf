@@ -9,7 +9,7 @@ import dateutil.parser
 import operator
 
 from jlf_stats.history import remove_gaps_from_state_transitions
-from jlf_stats.work import WorkItem
+from jlf_stats.work_item import WorkItem
 
 class TrelloWrapper(object):
     """

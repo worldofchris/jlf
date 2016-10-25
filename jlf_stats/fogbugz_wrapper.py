@@ -3,7 +3,7 @@ Wrapper around the FogBugz API to get data out and into a
 common format for reporting on.
 """
 
-from work import WorkItem
+from work_item import WorkItem
 import re
 import dateutil.parser
 import fogbugz

@@ -6,7 +6,7 @@ Get metrics from a JSON format file in the local filesystem.
 import json
 from dateutil import parser
 from jlf_stats.exceptions import MissingConfigItem
-from jlf_stats.work import WorkItem
+from jlf_stats.work_item import WorkItem
 
 
 class LocalWrapper(object):
@@ -15,6 +15,7 @@ class LocalWrapper(object):
 
         try:
             self.source = config['source']
+            self.cycles = config['cycles']
         except KeyError as exception:
             raise MissingConfigItem(exception,
                                     "Missing Config Item:{0}".format(exception))
@@ -40,9 +41,10 @@ class LocalWrapper(object):
                               title=item['title'],
                               state=item['state'],
                               type=item['type'],
-                              history=item['state_transitions'],
-                              date_created=parser.parse(item['date_created']),
-                              category=item['category'])
+                              date_created=parser.parse(item['date_created']).date(),
+                              state_transitions=item['state_transitions'],
+                              category=item['category'],
+                              cycle_config=self.cycles)
 
                 self.work_item_data.append(wi)
 

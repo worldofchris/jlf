@@ -10,16 +10,16 @@ import pandas as pd
 import numpy as np
 import math
 
-import exceptions
-from bucket import bucket_labels
-from index import fill_date_index_blanks, week_start_date
-from history import arrivals, history_from_state_transitions
+import jlf_stats.exceptions
+from jlf_stats.bucket import bucket_labels
+from jlf_stats.index import fill_date_index_blanks, week_start_date
+from jlf_stats.history import arrivals, history_from_state_transitions
 
 import re
 import os
 import json
 import math
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 class Metrics(object):
 
@@ -389,7 +389,16 @@ class Metrics(object):
 
         return wf
 
+
     def save_work_items(self, filename=None):
+
+        def json_serial(obj):
+            """JSON serializer for objects not serializable by default json code"""
+
+            if isinstance(obj, date):
+                serial = obj.isoformat()
+                return serial
+            raise TypeError (str(type(obj)) + " Type not serializable")
 
         if filename is None:
             if 'name' in self.config:
@@ -403,8 +412,9 @@ class Metrics(object):
         output = []
 
         for item in self.work_items:
-            # This is so wrong.  We are decoding then encoding then decoding again...
-            output.append(json.loads(item.to_JSON()))
+            work_item = item.__dict__
+            work_item.pop('history', None)
+            output.append(work_item)
 
         with open(filename, 'w') as outfile:
-            json.dump(output, outfile, indent=4, sort_keys=True)
+            json.dump(output, outfile, indent=4, sort_keys=True, default=json_serial)

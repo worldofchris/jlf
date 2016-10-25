@@ -14,7 +14,7 @@ from datetime import date, datetime
 from jlf_stats.index import week_start_date
 from jlf_stats.history import time_in_states, cycle_time, history_from_jira_changelog
 from jlf_stats.exceptions import MissingConfigItem
-from jlf_stats.work import WorkItem
+from jlf_stats.work_item import WorkItem
 import dateutil.parser
 
 
@@ -139,9 +139,14 @@ class JiraWrapper(object):
 
                     if issue.changelog is not None:
 
+                        # Do we need to do this if we are already extracting the state transitions below?
                         issue_history = history_from_jira_changelog(issue.changelog, date_created, self.until_date)
 
                         try:
+
+##############################################################################
+
+                            # TODO: Bin this as it's now in work_item
 
                             for cycle in self.cycles:
                                 reopened_state = None
@@ -191,8 +196,11 @@ class JiraWrapper(object):
                                                                exit_state=exit_state,
                                                                reopened_state=reopened_state)
 
+##############################################################################
+
                         except AttributeError:
 
+                            # TODO: At least log something
                             pass
 
                     state_transitions = []
