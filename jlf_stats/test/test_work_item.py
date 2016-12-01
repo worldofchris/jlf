@@ -47,3 +47,9 @@ class TestWorkItem(unittest.TestCase):
 
         self.assertEquals(work_item.cycles['develop'], 5)
 
+    def testSetCycles(self):
+        pass
+
+    def testSetHistory(self):
+        pass
+

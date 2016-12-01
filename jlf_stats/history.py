@@ -24,6 +24,9 @@ def cycle_time(history,
        we need to specify the date the issue was created and the CREATED_STATE
        if different from the default."""
 
+    if history is None:
+        return None
+
     if include_states is not None:
 
         count = 0
@@ -227,31 +230,36 @@ def history_from_state_transitions(start_date, state_transitions, end_date):
     history = []
 
     to_state = None # This needs to be the default state
+    num_days = 0
 
     last_date = start_date
     for state in state_transitions:
 
         date = state['timestamp'].date()
 
+
         num_days = (date - last_date).days
+
         for n in range(0, num_days):
             history.append(state['from'])
 
         last_date = date
         to_state = state['to']
 
-    num_days = (end_date - last_date).days
+        num_days = (end_date - last_date).days
 
     for n in range(0, num_days + 1):
         history.append(to_state)
 
+    history_df = None
     try:
         dates = [start_date + timedelta(days=x) for x in range(0, (end_date - start_date).days + 1)]
 
+        # TODO: Hack to fix off by one error for tomorrow
+        del history[len(dates):]
         history_df = pd.Series(history, index=dates)
     except  Exception as inst:
         print inst
-        raise
 
     return history_df
 

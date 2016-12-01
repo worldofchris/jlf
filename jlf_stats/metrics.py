@@ -94,7 +94,15 @@ class Metrics(object):
         details = []
 
         for work_item in self.work_items:
-            details.append(work_item.detail())
+            detail = work_item.detail()
+            if detail['type'] is not None:
+                detail['type_grouping'] = self.type_grouping(detail['type'])
+            details.append(detail)
+
+            if work_item.state in self.counts_towards_throughput:
+                detail['counts_towards_throughput'] = True
+            else:
+                detail['counts_towards_throughput'] = False
 
         df = pd.DataFrame(details)
 
@@ -102,6 +110,13 @@ class Metrics(object):
             return df
         else:
             return df.filter(fields)
+
+    def type_grouping(self, work_item_type):
+
+        for type_grouping in self.types:
+            if work_item_type.lower().strip() in self.types[type_grouping]:
+                return type_grouping
+                
 
     def history(self, from_date=None, until_date=None, types=None):
 
@@ -118,14 +133,14 @@ class Metrics(object):
                 if isinstance(self.source, JiraWrapper):
                     history[work_item.id] = work_item.history
                 else:
-                    history[work_item.id] = history_from_state_transitions(work_item.date_created.date(), work_item.history, until_date)
+                    history[work_item.id] = history_from_state_transitions(work_item.date_created, work_item.state_transitions, until_date)
             else:
                 for type_grouping in types:
                     if work_item.type in self.types[type_grouping]:
                         if isinstance(self.source, JiraWrapper):
-                            history[work_item.id] = work_item.history
+                            history[work_item.id] = work_item.history # TODO: This will need to be changed once we've got Trello working
                         else:
-                            history[work_item.id] = history_from_state_transitions(work_item.date_created.date(), work_item.history, until_date)
+                            history[work_item.id] = history_from_state_transitions(work_item.date_created, work_item.state_transitions, until_date)
 
         if history is not None:
             df = pd.DataFrame(history)
@@ -146,6 +161,7 @@ class Metrics(object):
         throughput_by_week = []
 
         if self.work_items is None:
+
             self.work_items = self.source.work_items()
 
         for work_item in self.work_items:
@@ -160,7 +176,7 @@ class Metrics(object):
                 if types is not None:
                     for type_grouping in types:
                         for work_type in self.types[type_grouping]:
-			    if work_item.type is not None:
+                            if work_item.type is not None:
                                 if work_item.type.lower().strip() == work_type.lower().strip():
                                     swimlane = swimlane + '-' + type_grouping
 
@@ -170,24 +186,26 @@ class Metrics(object):
 
 
                 # Work backwards through the item history...
-                for transition in reversed(work_item.history):
-                    state = transition['from']
-                    if not isinstance(state, basestring):
-                        state = 'unknown' # Need to figure out why we're getting NaNs from JIRA here.
+                try:
+                    for transition in reversed(work_item.state_transitions):
+                        state = transition['from']
+                        if not isinstance(state, basestring):
+                            state = 'unknown' # Need to figure out why we're getting NaNs from JIRA here.
 
-                    # ...and find the last transition from a state that doesn't count towards throughput
-                    if state not in self.counts_towards_throughput:
+                        # ...and find the last transition from a state that doesn't count towards throughput
+                        if state not in self.counts_towards_throughput:
 
-                        # Figure out which week we're in
-                        transition_date = transition['timestamp'].date()
+                            # Figure out which week we're in
+                            transition_date = transition['timestamp'].date()
 
-                        work_item_row = {'swimlane': swimlane,
-                                         'id':       work_item.id,
-                                         'week':     transition_date - timedelta(days=transition_date.weekday()),
-                                         'count':    1}
-                        throughput_by_week.append(work_item_row)
-                        break
-
+                            work_item_row = {'swimlane': swimlane,
+                                             'id':       work_item.id,
+                                             'week':     transition_date - timedelta(days=transition_date.weekday()),
+                                             'count':    1}
+                            throughput_by_week.append(work_item_row)
+                            break
+                except AttributeError:
+                    pass
         df = pd.DataFrame(throughput_by_week)
 
         if len(df.index) > 0:
@@ -412,7 +430,7 @@ class Metrics(object):
         output = []
 
         for item in self.work_items:
-            work_item = item.__dict__
+            work_item = item.__dict__.copy()
             work_item.pop('history', None)
             output.append(work_item)
 
