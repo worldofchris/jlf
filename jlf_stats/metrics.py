@@ -243,7 +243,7 @@ class Metrics(object):
                         if math.isnan(state):
                             return -1
 
-                    print "Missing state:{0}".format(str(state))
+                    print "Missing state:{0}".format(state.encode('utf-8'))
 
             days[day] = sorted(tickets, key=state_order)
 
