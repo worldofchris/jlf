@@ -14,7 +14,7 @@ class build_ext(_build_ext):
 
 setup(
     name="Just lean forward",
-    version="0.1.4dev",
+    version="0.1.6dev",
     description="Get Lean Stats like throughput and cycle time out of Jira/FogBugz/Trello with ease",
     author="Chris Young",
     license="LICENSE.md",

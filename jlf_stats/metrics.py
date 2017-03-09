@@ -243,7 +243,7 @@ class Metrics(object):
                         if math.isnan(state):
                             return -1
 
-                    print "Missing state:{0}".format(state)
+                    print "Missing state:{0}".format(str(state))
 
             days[day] = sorted(tickets, key=state_order)
 
@@ -325,7 +325,8 @@ class Metrics(object):
     def demand(self,
                from_date,
                to_date,
-               types=None):
+               types=None,
+               cumulative=False):
         """
         Return the number of issues created each week - i.e. the demand on the system
         """
@@ -378,7 +379,11 @@ class Metrics(object):
 
         reindexed = table.reindex(index=fill_date_index_blanks(table.index), fill_value=np.int64(0))
         reindexed.index.name = "week"
-        return reindexed
+        if not cumulative:
+            return reindexed
+        else:
+            return reindexed.fillna(0).cumsum()
+
 
     def arrival_rate(self,
                      from_date,
