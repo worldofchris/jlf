@@ -24,6 +24,7 @@ setup(
     scripts=['bin/jlf'],
     setup_requires=['numpy'],
     install_requires=[
+        'BeautifulSoup==3.2.1',
         'nose',
         'mock',
         'argparse==1.2.1',
