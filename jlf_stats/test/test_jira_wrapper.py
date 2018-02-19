@@ -274,27 +274,42 @@ class TestGetMetrics(unittest.TestCase):
         Excel
         """
 
-        expected = {'Ops Tools': pd.Series([np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(2),
-                                            np.int64(3)],
-                                           index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']),
-                    'Portal':    pd.Series([np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(2),
-                                            np.int64(3)],
-                                           index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12']),
-                    'Reports':   pd.Series([np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(1),
-                                            np.int64(2),
-                                            np.int64(3)],
-                                           index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
+        expected = {'Ops Tools': pd.Series([np.float64(1),
+                                            np.float64(1),
+                                            np.float64(1),
+                                            np.float64(1),
+                                            np.float64(2),
+                                            np.float64(3)],
+                                           index=[datetime(2012,10,8),
+                                                  datetime(2012,10,15), 
+                                                  datetime(2012,10,22), 
+                                                  datetime(2012,10,29), 
+                                                  datetime(2012,11,05), 
+                                                  datetime(2012,11,12)]),
+                    'Portal':    pd.Series([np.float64(1),
+                                            np.float64(1),
+                                            np.float64(1),
+                                            np.float64(1),
+                                            np.float64(2),
+                                            np.float64(3)],
+                                           index=[datetime(2012,10,8),
+                                                  datetime(2012,10,15),
+                                                  datetime(2012,10,22),
+                                                  datetime(2012,10,29),
+                                                  datetime(2012,11,05),
+                                                  datetime(2012,11,12)]),
+                    'Reports':   pd.Series([np.float64(1),
+                                            np.float64(1),
+                                            np.float64(1),
+                                            np.float64(1),
+                                            np.float64(2),
+                                            np.float64(3)],
+                                           index=[datetime(2012,10,8),
+                                                  datetime(2012,10,15),
+                                                  datetime(2012,10,22),
+                                                  datetime(2012,10,29),
+                                                  datetime(2012,11,05),
+                                                  datetime(2012,11,12)])}
 
         expected_frame = pd.DataFrame(expected)
 
@@ -310,7 +325,7 @@ class TestGetMetrics(unittest.TestCase):
                                            from_date=date(2012, 01, 01),
                                            to_date=date(2012, 11, 13))
 
-        assert_frame_equal(actual_frame.astype(np.int64), expected_frame), actual_frame
+        assert_frame_equal(actual_frame.astype(np.float64), expected_frame), actual_frame
 
     def testGetThroughputMultipleCategories(self):
         """
@@ -322,13 +337,18 @@ class TestGetMetrics(unittest.TestCase):
 
         our_jira = Metrics(config=jira_config)
 
-        expected_1 = {'Ops Tools': pd.Series([np.int64(1),
-                                              np.int64(1),
-                                              np.int64(1),
-                                              np.int64(1),
-                                              np.int64(2),
-                                              np.int64(3)],
-                                             index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
+        expected_1 = {'Ops Tools': pd.Series([np.float64(1),
+                                              np.float64(1),
+                                              np.float64(1),
+                                              np.float64(1),
+                                              np.float64(2),
+                                              np.float64(3)],
+                                             index=[datetime(2012,10,8), 
+                                                    datetime(2012,10,15),
+                                                    datetime(2012,10,22),
+                                                    datetime(2012,10,29),
+                                                    datetime(2012,11,05),
+                                                    datetime(2012,11,12)])}
 
         expected_frame_1 = pd.DataFrame(expected_1)
 
@@ -340,15 +360,20 @@ class TestGetMetrics(unittest.TestCase):
                                              to_date=date(2012, 11, 13),
                                              category="Ops Tools")
 
-        assert_frame_equal(actual_frame_1.astype(np.int64), expected_frame_1), actual_frame_1
+        assert_frame_equal(actual_frame_1.astype(np.float64), expected_frame_1), actual_frame_1
 
-        expected_2 = {'Portal':        pd.Series([np.int64(1),
-                                                  np.int64(1),
-                                                  np.int64(1),
-                                                  np.int64(1),
-                                                  np.int64(2),
-                                                  np.int64(3)],
-                                                 index=['2012-10-08', '2012-10-15', '2012-10-22', '2012-10-29', '2012-11-05', '2012-11-12'])}
+        expected_2 = {'Portal':        pd.Series([np.float64(1),
+                                                  np.float64(1),
+                                                  np.float64(1),
+                                                  np.float64(1),
+                                                  np.float64(2),
+                                                  np.float64(3)],
+                                                 index=[datetime(2012,10,8),
+                                                        datetime(2012,10,15),
+                                                        datetime(2012,10,22),
+                                                        datetime(2012,10,29),
+                                                        datetime(2012,11,05),
+                                                        datetime(2012,11,12)])}
 
         expected_frame_2 = pd.DataFrame(expected_2)
 
@@ -360,7 +385,7 @@ class TestGetMetrics(unittest.TestCase):
                                              to_date=date(2012, 11, 13),
                                              category="Portal")
 
-        assert_frame_equal(actual_frame_2.astype(np.int64), expected_frame_2), actual_frame_2
+        assert_frame_equal(actual_frame_2.astype(np.float64), expected_frame_2), actual_frame_2
 
     def testFillInTheBlanks(self):
         """
@@ -368,9 +393,9 @@ class TestGetMetrics(unittest.TestCase):
         This is going to make the graph inconsistent so we re-index to add in the missing weeks.
         """
 
-        expected = {'Ops Tools': pd.Series([np.int64(1), np.int64(2), np.int64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12']),
-                    'Portal':    pd.Series([np.int64(1), np.int64(2), np.int64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12']),
-                    'Reports':   pd.Series([np.int64(1), np.int64(2), np.int64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12'])}
+        expected = {'Ops Tools': pd.Series([np.float64(1), np.float64(2), np.float64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12']),
+                    'Portal':    pd.Series([np.float64(1), np.float64(2), np.float64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12']),
+                    'Reports':   pd.Series([np.float64(1), np.float64(2), np.float64(3)], index=['2012-10-8', '2012-11-5', '2012-11-12'])}
 
         expected_frame = pd.DataFrame(expected)
         actual_index = fill_date_index_blanks(expected_frame.index)
@@ -384,7 +409,7 @@ class TestGetMetrics(unittest.TestCase):
         This is not working for the week commencing 2013-12-30.
         """
 
-        expected = {'bi-value': pd.Series([np.int64(1)], index=['2013-12-30'])}
+        expected = {'bi-value': pd.Series([np.float64(1)], index=['2013-12-30'])}
 
         expected_frame = pd.DataFrame(expected)
         actual_index = fill_date_index_blanks(expected_frame.index)
@@ -805,13 +830,13 @@ class TestGetMetrics(unittest.TestCase):
         our_jira = Metrics(config=jira_config)
 
         expected = {
-            pd.to_datetime('2012-01-02'): {'QA Queue': np.int64(1), 'Customer Approval': np.int64(1)}
+            pd.to_datetime('2012-01-02'): {'QA Queue': np.float64(1), 'Customer Approval': np.float64(1)}
         }
 
         expected_frame = pd.DataFrame.from_dict(expected, orient='index').sort_index(axis=1)
         actual_frame = our_jira.arrival_rate(date(2012, 1, 1), date(2012, 1, 3)).sort_index(axis=1)
 
-        assert_frame_equal(actual_frame.astype(np.int64), expected_frame), actual_frame
+        assert_frame_equal(actual_frame.astype(np.float64), expected_frame), actual_frame
 
     @unittest.skip("This is hard coded now as only needed on one project")
     def testGetCustomFields(self):

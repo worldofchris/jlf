@@ -170,7 +170,7 @@ class Metrics(object):
 
         if len(df.index) > 0:
 
-            table = pd.tools.pivot.pivot_table(df, rows=['week'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
+            table = pd.pivot_table(df, index=['week'], columns=['swimlane'], values='count', aggfunc=np.count_nonzero)
 
             if cumulative:
                 return table
@@ -344,7 +344,7 @@ class Metrics(object):
 
         df = pd.DataFrame(details)
 
-        table = pd.tools.pivot.pivot_table(df, rows=['week_created'], cols=['swimlane'], values='count', aggfunc=np.count_nonzero)
+        table = pd.pivot_table(df, index=['week_created'], columns=['swimlane'], values='count', aggfunc=np.count_nonzero)
 
         reindexed = table.reindex(index=fill_date_index_blanks(table.index), fill_value=np.int64(0))
         reindexed.index.name = "week"

@@ -248,7 +248,7 @@ class TestIssueHistory(unittest.TestCase):
 
         histories = [mockHistory(u'2012-11-18T09:54:29.284+0000', [mockItem('status', 'queued', START_STATE)]),
                      mockHistory(u'2012-11-28T09:54:29.284+0000', [mockItem('status', START_STATE, 'pending')]),
-                     mockHistory(u'2012-11-30T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])]
+                     mockHistory(u'2012-11-30T09:54:29.284+0000', [mockItem('status', 'pending', END_STATE)])][::-1]
 
         created = date(2012, 11, 16)
         today = date(2012, 12, 02)
@@ -313,22 +313,21 @@ class TestIssueHistory(unittest.TestCase):
                              START_STATE,
                              START_STATE,
                              END_STATE],
-                             index=pd.to_datetime(['2012-01-01',
-                                                   '2012-01-02',
-                                                   '2012-01-03',
-                                                   '2012-01-04',
-                                                   '2012-01-05',
-                                                   '2012-01-06',
-                                                   '2012-01-07',
-                                                   '2012-01-08',
-                                                   '2012-01-09',
-                                                   '2012-01-10',
-                                                   '2012-01-11',
-                                                   '2012-01-12',
-                                                   '2012-01-13']))
+                             index=[date(2012, 1, 1),
+                                    date(2012, 1, 2),
+                                    date(2012, 1, 3),
+                                    date(2012, 1, 4),
+                                    date(2012, 1, 5),
+                                    date(2012, 1, 6),
+                                    date(2012, 1, 7),
+                                    date(2012, 1, 8),
+                                    date(2012, 1, 9),
+                                    date(2012, 1, 10),
+                                    date(2012, 1, 11),
+                                    date(2012, 1, 12),
+                                    date(2012, 1, 13)])
 
-        actual = history_from_jira_changelog(source, date(2012, 01, 01))
-
+        actual = history_from_jira_changelog(source, date(2012, 1, 1))
         assert_series_equal(actual, expected)
 
     def testGetArrivals(self):
@@ -386,22 +385,22 @@ class TestIssueHistory(unittest.TestCase):
                               'Resolved (Fixed)',
                               'Resolved (Fixed)',
                               'Closed'],                           
-                             index=pd.to_datetime(['2015-02-25',
-                                                   '2015-02-26',
-                                                   '2015-02-27',
-                                                   '2015-02-28',
-                                                   '2015-03-01',
-                                                   '2015-03-02',
-                                                   '2015-03-03',
-                                                   '2015-03-04',
-                                                   '2015-03-05',
-                                                   '2015-03-06',
-                                                   '2015-03-07',
-                                                   '2015-03-08',
-                                                   '2015-03-09',
-                                                   '2015-03-10',
-                                                   '2015-03-11',
-                                                   '2015-03-12']))
+                             index=[date(2015,02,25),
+                                    date(2015,02,26),
+                                    date(2015,02,27),
+                                    date(2015,02,28),
+                                    date(2015,03,01),
+                                    date(2015,03,02),
+                                    date(2015,03,03),
+                                    date(2015,03,04),
+                                    date(2015,03,05),
+                                    date(2015,03,06),
+                                    date(2015,03,07),
+                                    date(2015,03,8),
+                                    date(2015,03,9),
+                                    date(2015,03,10),
+                                    date(2015,03,11),
+                                    date(2015,03,12)])
 
         actual = history_from_state_transitions(dateutil.parser.parse("2015-02-25T10:02:06+00:00").date(),
                                                 state_transitions,

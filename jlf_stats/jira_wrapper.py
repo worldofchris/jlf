@@ -145,7 +145,6 @@ class JiraWrapper(object):
                     date_created = datetime.strptime(issue.fields.created[:10], '%Y-%m-%d')
 
                     if issue.changelog is not None:
-
                         issue_history = history_from_jira_changelog(issue.changelog, date_created, self.until_date)
 
                         try:

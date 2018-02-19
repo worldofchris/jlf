@@ -126,7 +126,7 @@ def time_in_states(histories, from_date=None, until_date=None):
 
     time_in_states = []
 
-    current_state = 'Open'
+    current_state = u'Open'
 
     if from_date is None:
         from_date = date(1970, 01, 01)
@@ -136,10 +136,9 @@ def time_in_states(histories, from_date=None, until_date=None):
     else:
         prev_state_change_date = from_date
 
-    for history in histories:
+    for history in reversed(histories):
         for item in history.items:
             if item.field == 'status':
-
                 state_change_date = extract_date(history.created)
 
                 days_in_state = state_change_date - prev_state_change_date

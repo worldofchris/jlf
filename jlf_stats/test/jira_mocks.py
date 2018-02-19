@@ -16,7 +16,7 @@ class mockItem(object):
 class mockChangelog(object):
 
     def __init__(self, histories):
-        self.histories = histories
+        self.histories = histories[::-1]
 
 CREATED_STATE = 'Open'
 START_STATE = 'In Progress'

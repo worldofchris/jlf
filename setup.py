@@ -31,12 +31,10 @@ setup(
         'ipython==0.13.2',
         'fogbugz',
         'jira',
-        'numpy',
         'openpyxl==1.6.2',
-        'pandas==0.13.1',
+        'pandas',
         'python-dateutil==1.5',
         'pytz==2013b',
-        'six==1.9.0',
         'xlrd==0.9.2',
         'xlwt==0.7.5',
         'XlsxWriter'

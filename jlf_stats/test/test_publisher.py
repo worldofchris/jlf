@@ -416,7 +416,6 @@ class TestGetOutput(unittest.TestCase):
         actual_output = os.path.join(self.workspace, expected_filename)
 
         self.assertTrue(os.path.isfile(actual_output), "Spreadsheet not published:{spreadsheet}".format(spreadsheet=actual_output))
-
         self.compareExcelFiles(actual_output, expected_filename)
 
     def testColourInExcelCfd(self):
@@ -438,7 +437,6 @@ class TestGetOutput(unittest.TestCase):
         actual_output = os.path.join(self.workspace, expected_filename)
 
         self.assertTrue(os.path.isfile(actual_output), "Spreadsheet not published:{spreadsheet}".format(spreadsheet=actual_output))
-
         self.compareExcelFiles(actual_output, expected_filename)
 
     @unittest.skip("TODO")
