@@ -1,9 +1,20 @@
-# Just _lean_ forward
+# So long and thanks for all the Stars
+
+A while ago on [twitter](https://twitter.com/worldofchris/status/1147029307589582848) [Troy Magennis](https://github.com/FocusedObjective/) alerted me to [Martin Aspeli](https://github.com/optilude)'s [jira-agile-metrics](https://github.com/DeloitteDigitalUK/jira-agile-metrics). Seeing this I have decided to mothball this project and instead contribute to that project. For one thing JLF is still on _ye olde_ Python 2 which has now come to the end of its life.
+
+Thanks to everyone who has shown an interest in this work and hope to see you over on [jira-agile-metrics](https://github.com/DeloitteDigitalUK/jira-agile-metrics).
+
+worldofchris Feb 2020
+
+<a title="Warner Bros. [Public domain]" href="https://commons.wikimedia.org/wiki/File:Thats_all_folks.svg"><img width="512" alt="Thats all folks" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Thats_all_folks.svg/512px-Thats_all_folks.svg.png"></a>
+
+Previously...
+
+## Just _lean_ forward
 
 [![Build Status](https://travis-ci.org/worldofchris/jlf.png)](https://travis-ci.org/worldofchris/jlf)
 
-## Extract _forward_ looking indicators from JIRA and FogBugz
-
+### Extract _forward_ looking indicators from JIRA and FogBugz
 
 ![image](public/assets/cfd.png)
 
