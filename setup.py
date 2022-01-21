@@ -28,7 +28,7 @@ setup(
         'nose',
         'mock',
         'argparse==1.2.1',
-        'ipython==0.13.2',
+        'ipython==7.16.3',
         'fogbugz',
         'jira',
         'openpyxl==1.6.2',
