@@ -31,7 +31,7 @@ setup(
         'ipython==0.13.2',
         'fogbugz',
         'jira',
-        'openpyxl==1.6.2',
+        'openpyxl==2.4.2',
         'pandas',
         'python-dateutil==1.5',
         'pytz==2013b',
